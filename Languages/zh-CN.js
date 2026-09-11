@@ -255,6 +255,8 @@
     "p.speed.label": "时间倍率",
     "p.speed.hint": "闪膜流动/闪粉跳动的速度",
     "p.cardSize.label": "卡片大小",
+    "p.cornerPx.label": "卡片圆角 (px)",
+    "p.cornerPx.hint": "卡片四角的圆角半径，单位是原图像素（原图 813×1185）。0 = 方角。这是运行时遮罩，拖一下立刻变，不用重烤",
     "p.cardSize.hint": "画面上卡片的高度占画布的比例。实际会被自动夹住 —— 保证整张卡都在画面里，不会被裁边",
     "p.scale.label": "渲染分辨率",
     "p.scale.hint": "内部渲染倍率，掉帧就调低",

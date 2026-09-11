@@ -755,10 +755,10 @@ check('自动识别出的外沿与手工量的一致（这张卡是 26,26 → 78
     Math.abs(c.rect.x1 - 787) <= 3 && Math.abs(c.rect.y1 - 1157) <= 3),
   handMeasured.map((c) => `${c.rect.x0},${c.rect.y0} → ${c.rect.x1},${c.rect.y1}`).join(' · ') || '没找到那张卡');
 
-// 原图是方角的（自带黑边）。圆角由 embed-card.mjs 的 --corner 统一削（默认 5px，
-// 接近实体卡的倒角观感），这里核对它确实按设定值烤进去了、没偷偷回退成 0。
-check('圆角按 --corner 设定值烤进了纹理 alpha（默认 5px）',
-  handMeasured.every((c) => c.corner > 0 && c.corner <= 40),
+// 圆角已挪到运行时（uCardRound uniform + 侧栏「卡片圆角 (px)」滑条），
+// 所以烘焙出来的 cornerRadius 固定是 0；这里只核对"没有再烤进去"。
+check('圆角不再烤进纹理（改由运行时的 uCardRound 控制）',
+  handMeasured.every((c) => c.corner === 0),
   handMeasured.map((c) => c.corner + 'px').join(' · ') || '—');
 
 if (cards.n > 1) {

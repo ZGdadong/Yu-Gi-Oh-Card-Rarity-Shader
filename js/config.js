@@ -30,6 +30,7 @@
     { key: 'autoSway', group: '观看', label: '自动摆动', type: 'range', min: 0, max: 1, step: 0.01, def: 0.35, hint: '鼠标离开时卡片自己慢慢摇，闪膜一直在动，不用手也有得看' },
     { key: 'swaySpeed', group: '观看', label: '摆动速度', type: 'range', min: 0, max: 2, step: 0.01, def: 0.5 },
     { key: 'speed', group: '观看', label: '时间倍率', type: 'range', min: 0, max: 3, step: 0.01, def: 1, hint: '闪膜流动/闪粉跳动的速度' },
+    { key: 'cornerPx', group: '观看', label: '卡片圆角 (px)', type: 'range', min: 0, max: 60, step: 0.5, def: 5, hint: '卡片四角的圆角半径，单位是**原图像素**（原图 813×1185）。0 = 方角。这是运行时遮罩，拖一下立刻变，不用重烤' },
     { key: 'cardSize', group: '观看', label: '卡片大小', type: 'range', min: 0.35, max: 1.05, step: 0.01, def: 0.78, hint: '画面上卡片的高度占画布的比例。实际会被自动夹住 —— 保证整张卡都在画面里，不会被裁边' },
     { key: 'scale', group: '观看', label: '渲染分辨率', type: 'range', min: 0.4, max: 1, step: 0.05, def: 1, hint: '内部渲染倍率，掉帧就调低' },
     { key: 'shadowOn', group: '观看', label: '投影', type: 'check', def: 1 },

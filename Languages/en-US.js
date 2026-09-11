@@ -257,6 +257,8 @@
     "p.speed.label": "Time multiplier",
     "p.speed.hint": "Speed of the film flowing and the glitter flickering",
     "p.cardSize.label": "Card size",
+    "p.cornerPx.label": "Card corner radius (px)",
+    "p.cornerPx.hint": "Corner radius of the card, in source-image pixels (the source is 813x1185). 0 = square corners. This is a runtime mask, so dragging updates instantly with no re-bake",
     "p.cardSize.hint": "The card's height as a fraction of the canvas. It gets clamped automatically — the whole card always stays in frame and never gets cropped",
     "p.scale.label": "Render resolution",
     "p.scale.hint": "Internal render scale; turn it down if the frame rate drops",

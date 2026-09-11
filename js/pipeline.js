@@ -508,6 +508,11 @@
       this.u2f(prog, 'uView', v[0], v[1]);
       this.u2f(prog, 'uViewPt', vp[0], vp[1]);
       this.u1f(prog, 'uAspect', this.spec.contentAspect);
+      // 圆角：参数按**原图像素**给，换算成 cardUV 的归一单位（纹理高 = 1）。
+      // 抗锯齿半宽取屏幕上约 1.5px，不然斜边会有硬台阶。
+      const texH = Math.max(1, this.spec.height);
+      const cardHpx = Math.max(1, (this.cardRect && this.cardRect.h) || texH);
+      this.u4f(prog, 'uCardRound', [P.cornerPx / texH, 1.5 / cardHpx, 0, 0]);
       this.u1f(prog, 'uSeed', seed || 0);
       const rr = this.regionRects();
       this.u4f(prog, 'uRectArtOuter', rr.artOuter);

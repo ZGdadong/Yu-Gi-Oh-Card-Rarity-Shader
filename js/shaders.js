@@ -65,6 +65,7 @@ uniform vec2  uView;          // 视角方向（-1..1，来自卡片倾斜）
 uniform vec2  uViewPt;        // 高光点在卡片坐标里的位置
 uniform float uAspect;        // 卡片宽 / 高
 uniform float uSeed;          // 每张卡的固定噪声相位
+uniform vec4  uCardRound;     // 圆角：x = 半径, y = 抗锯齿半宽（都按"高 = 1"归一）
 
 uniform vec4 uP0;             // 该效果自己的参数（含义见各 effect 的注释）
 uniform vec4 uP1;
@@ -82,6 +83,41 @@ out vec4 fragColor;
 // uContent 是卡片内容在纹理里的矩形，横竖两个方向的留白比例不一定相同，
 // 所以这里用矩形换算而不是一个标量 margin。
 vec2 cardUV(vec2 uv) { return (uv - uContent.xy) / (uContent.zw - uContent.xy); }
+
+/*
+ * 卡面遮罩 + 纹理采样包装。
+ *
+ * **所有**采样 uTex 的地方都走 cardTex()（25 处），而不是直接 texture(uTex, ...)。
+ * 这样圆角只要在这里削一次 alpha 就对每一层都生效 —— 因为每个工艺着色器返回的都是
+ * vec4(col, tex.a * 覆盖度)（见本文件顶部），全都乘 tex.a。
+ * 否则得挨个改二十多个着色器的返回值，漏一个那个角上就漏个尖。
+ *
+ * 为什么圆角能在**运行时**调：它只是 alpha 上的一道遮罩，跟图像内容无关。
+ *（对照：卡名笔画必须烘焙 —— 那是从图里按暗度抠出来的。）
+ */
+float cardMask(vec2 uv) {
+    if (uCardRound.x <= 0.0) {
+        // 不削圆角时也把卡片外面判成 0：阴影靠采样 alpha 做软边，
+        // 越界后 CLAMP_TO_EDGE 会把边缘的不透明像素取回来，软边就散不开。
+        return (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) ? 0.0 : 1.0;
+    }
+    // 归一成"高 = 1"的等比坐标，圆角才不会被横向拉成椭圆
+    // （变量名别用 half —— GLSL ES 里它是保留字，编译直接失败）
+    vec2 p = vec2(uv.x * uAspect, uv.y);
+    vec2 hc = vec2(uAspect, 1.0) * 0.5;
+    vec2 d = abs(p - hc) - (hc - vec2(uCardRound.x));
+    float sdf = length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - uCardRound.x;
+    // 抗锯齿只往**外**过渡（0 → +aa），不能写成 smoothstep(-aa, +aa, sdf)：
+    // 那样在卡片边界上（sdf 正好 = 0）alpha 是 0.5，四条边全会渗背景 ——
+    // 在深色背景上就是一圈半透明的暗边，卡片一摆动它就跟着闪。
+    return 1.0 - smoothstep(0.0, uCardRound.y, sdf);
+}
+
+vec4 cardTex(vec2 uv) {
+    vec4 t = texture(uTex, uv);
+    t.a *= cardMask(uv);
+    return t;
+}
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
@@ -162,7 +198,7 @@ float pickMask(vec4 m, float sel, vec2 uv) {
     if (s < 7.5) return max(frame, ring);
     if (s < 8.5) {
         // 效果框里的字：效果框是白底黑字，所以按暗度抠
-        float g = luma(texture(uTex, uv).rgb);
+        float g = luma(cardTex( uv).rgb);
         return text * (1.0 - smoothstep(0.25, 0.70, g));
     }
     if (s < 9.5) return max(frame, m.r);
@@ -212,7 +248,7 @@ float cover(float mask, float strength) { return clamp(mask * strength, 0.0, 1.0
 
   BODY.base = `
 // 直通：原始卡面。draw step 的第一遍永远是它。
-vec4 effect(vec2 uv) { return texture(uTex, uv); }
+vec4 effect(vec2 uv) { return cardTex( uv); }
 `;
 
   BODY.shadow = `
@@ -223,7 +259,7 @@ vec4 effect(vec2 uv) {
     float a = 0.0;
     for (int j = -2; j <= 2; j++) {
         for (int i = -2; i <= 2; i++) {
-            a += texture(uTex, uv + vec2(float(i), float(j)) * ts).a;
+            a += cardTex( uv + vec2(float(i), float(j)) * ts).a;
         }
     }
     return vec4(0.0, 0.0, 0.0, (a / 25.0) * uP0.x);
@@ -251,7 +287,7 @@ vec4 effect(vec2 uv) {
 // 掩膜调试：把几块工艺区按颜色画出来，用来核对"区域切得对不对"。
 // 红=卡名  绿=卡图  蓝=效果框  灰=卡框  黄=卡图外环
 vec4 effect(vec2 uv) {
-    vec4 t = texture(uTex, uv);
+    vec4 t = cardTex( uv);
     vec4 m = texture(uMask, uv);
     vec2 cu = cardUV(uv);
     float card = pickMask(m, 0.0, uv);
@@ -277,7 +313,7 @@ vec4 effect(vec2 uv) {
 //   uP1 = (色相偏移, 视角增益, 暗部增强, 遮罩选择)
 //   uP2 = (流动速度, 细颗粒, 保留, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -304,7 +340,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 线密度, 线锐度, 暗部增强)
 //   uP1 = (色带频率, 视角增益, 线角度(弧度), 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -332,7 +368,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 碎格密度, 锐度, 暗部增强)
 //   uP1 = (角度(弧度), 视角增益, 副方向混合, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -367,7 +403,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 密度, 交叉白, 暗部增强)
 //   uP1 = (角度(弧度), 视角增益, 交叉混合, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -397,7 +433,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 密度, 星形锐度, 暗部增强)
 //   uP1 = (视角增益, 星外底色, 保留, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -423,7 +459,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 密度, 格线宽度, 暗部增强)
 //   uP1 = (视角增益, 色相散布, 保留, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -446,7 +482,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 碎片密度, 裂纹亮度, 暗部增强)
 //   uP1 = (视角增益, 色相散布, 保留, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -482,7 +518,7 @@ vec4 effect(vec2 uv) {
 // **加法混合**：只输出"多加了多少光"，不碰卡面颜色。
 //   uP0 = (强度, 密度, 尺寸, 闪烁速度)   uP1 = (保留, 保留, 保留, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(0.0, 0.0, 0.0, 1.0);
@@ -507,7 +543,7 @@ vec4 effect(vec2 uv) {
 // **加法混合**：只输出多加的光。
 //   uP0 = (强度, 频率, 锐度, 速度)   uP1 = (视角增益, 保留, 保留, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(0.0, 0.0, 0.0, 1.0);
@@ -532,7 +568,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 线密度, 线锐度, KC 标强度)
 //   uP1 = (视角增益, 色带频率, 标平铺尺寸, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -563,7 +599,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 线密度, 字形强度, 字形密度)
 //   uP1 = (视角增益, 保留, 保留, 遮罩选择)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -600,7 +636,7 @@ vec4 effect(vec2 uv) {
 //   uP1 = (图集格 x, 图集格 y, 保留, 保留)
 //   uP2 = (偏移 x, 偏移 y, 保留, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP0.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -627,17 +663,17 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 光照角度(弧度), 金属化程度, 高光)
 //   uP1 = (遮罩选择, 细节尺度, 光照俯角, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.x, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
 
     vec2 ts = 1.0 / uResolution;
     float sc = uP1.y;
-    float hl = luma(texture(uTex, uv - vec2(ts.x, 0.0)).rgb);
-    float hr = luma(texture(uTex, uv + vec2(ts.x, 0.0)).rgb);
-    float hu = luma(texture(uTex, uv - vec2(0.0, ts.y)).rgb);
-    float hd = luma(texture(uTex, uv + vec2(0.0, ts.y)).rgb);
+    float hl = luma(cardTex( uv - vec2(ts.x, 0.0)).rgb);
+    float hr = luma(cardTex( uv + vec2(ts.x, 0.0)).rgb);
+    float hu = luma(cardTex( uv - vec2(0.0, ts.y)).rgb);
+    float hd = luma(cardTex( uv + vec2(0.0, ts.y)).rgb);
     vec3 n = normalize(vec3((hl - hr) * sc, (hu - hd) * sc, 1.0));
 
     vec3 L = normalize(vec3(cos(uP0.y), sin(uP0.y), max(uP1.z, 0.05)));
@@ -662,7 +698,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 彩虹强度, 对比度, 辉光)
 //   uP1 = (遮罩选择, 保留, 保留, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.x, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -691,7 +727,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 拉丝密度, 拉丝各向异性, 高光)
 //   uP1 = (遮罩选择, 视角增益, 印刷保留度, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.x, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -726,7 +762,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 饱和度, 半径衰减, 保留)
 //   uP1 = (遮罩选择, 色相偏移, 保留, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.x, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
@@ -754,7 +790,7 @@ vec4 effect(vec2 uv) {
 //   uP0 = (强度, 金属明暗对比, 碎闪强度, 保留)
 //   uP1 = (渐变频率, 渐变相位, 保留, 保留)
 vec4 effect(vec2 uv) {
-    vec4 tex = texture(uTex, uv);
+    vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     if (m.r < 0.004) return vec4(tex.rgb, 0.0);
 

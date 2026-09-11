@@ -55,10 +55,14 @@ const ONLY = flag('only', null);
 const MARGIN = 0;            // 纹理四周留白。0 = 原图即卡面
 const FORMAT = 'image/webp';
 const QUALITY = 0.95;
-// 圆角半径（**原图像素**）。5 ≈ 实体卡的倒角观感；--corner 0 就是不削。
-// 只削纹理的 alpha 通道就够：每个工艺着色器返回的都是 vec4(col, tex.a * 覆盖度)
-//（js/shaders.js:28），所有图层都乘 tex.a，会跟着一起被削，不用动着色器。
-const CORNER_PX = parseInt(flag('corner', '5'), 10);
+// 圆角**已经挪到运行时**了（侧栏「卡片圆角 (px)」那根滑条 → uCardRound uniform）。
+// 它只是 alpha 上的一道遮罩、跟图像内容无关，烤进纹理纯属自找麻烦 —— 改一次要重烤 35 秒。
+// 所以这里默认 0（不削）；保留 --corner 只是为了"要把圆角焊死在纹理里"的少数场合。
+//
+// 当年圆角烤在这里时靠的性质：每个工艺着色器返回的都是 vec4(col, tex.a * 覆盖度)
+//（js/shaders.js 顶部），所有图层都乘 tex.a，所以削 alpha 一处就够。
+// 现在同一条性质被用在着色器的 cardTex() 包装上 —— 一处削、处处削。
+const CORNER_PX = parseInt(flag('corner', '0'), 10);
 
 // 区域（**卡片相对**比例，0..1；v=0 是卡片上沿，与 LÖVE 的纹理坐标约定一致）
 const REGIONS = {
