@@ -340,8 +340,22 @@
     } else {
       const top = el('div', 'prow-top');
       top.appendChild(el('span', 'plabel', label));
-      const val = el('span', 'pval', '');
+      const val = document.createElement('input');
+      val.type = 'number';
+      val.className = 'pval pnum';
+      val.min = String(sp.min);
+      val.max = String(sp.max);
+      val.step = String(sp.step);
       val.dataset.val = sp.key;
+      // 读数做成**可键入**的数字框：step=0.0001 时滑条一共 10000 步，
+      // 1 像素就跨 ~50 步，光靠拖根本打不准 0.1800 这种值。
+      const commit = () => {
+        const n = Number(val.value);
+        if (val.value !== '' && !isNaN(n)) p.setParam(sp.key, n);
+        syncPanel(p);
+      };
+      val.addEventListener('change', commit);
+      val.addEventListener('blur', commit);
       top.appendChild(val);
       row.appendChild(top);
       const inp = document.createElement('input');
@@ -373,8 +387,13 @@
     });
     body.querySelectorAll('.pval').forEach((v) => {
       const k = v.dataset.val;
-      if (!CFG.BY_KEY[k]) return;
-      v.textContent = typeof P[k] === 'number' ? String(Math.round(P[k] * 100) / 100) : String(P[k]);
+      const sp = CFG.BY_KEY[k];
+      if (!sp) return;
+      // 小数位数跟着 step 走（CFG.decimalsOf）—— 以前这里写死 Math.round(v*100)/100，
+      // 于是「区域」那组 step=0.0001 的参数永远只显示 0.18，0.183 和 0.188 看着一模一样。
+      const txt = typeof P[k] === 'number' ? P[k].toFixed(CFG.decimalsOf(sp)) : String(P[k]);
+      if (v.tagName === 'INPUT') { if (document.activeElement !== v) v.value = txt; }
+      else v.textContent = txt;
     });
     syncPresetSelect(p);
     syncCardMini(p);

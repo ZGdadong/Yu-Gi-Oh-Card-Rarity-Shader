@@ -72,24 +72,26 @@
     // 坐标是 **cardUV**（整图相对，0..1；y 向下，0 = 图片上沿）。
     // 想换算成像素：x × 813，y × 1185。
     //   例：artInnerY0 = 0.1730 → 0.1730 × 1185 ≈ 205px
+    // 步长 0.0001 = 第 4 位小数：约 0.08px（横）/ 0.12px（纵）——
+    // 够细，而且读数框可以直接键入精确值（滑条 1 像素 ≈ 50 步，光靠拖是打不准的）。
     { key: 'regionManual', group: '区域', label: '手动区域', type: 'check', def: 1,
       hint: '打开时下面 12 根滑条生效；关掉就回到每张卡烘焙时自动检测出来的值（两者默认值相同，所以开关本身不改变画面）' },
 
-    { key: 'artOuterX0', group: '区域', label: '卡图窗外框 · 左', type: 'range', min: 0, max: 1, step: 0.001, def: 0.100873 },
-    { key: 'artOuterY0', group: '区域', label: '卡图窗外框 · 上', type: 'range', min: 0, max: 1, step: 0.001, def: 0.167271 },
-    { key: 'artOuterX1', group: '区域', label: '卡图窗外框 · 右', type: 'range', min: 0, max: 1, step: 0.001, def: 0.900344 },
-    { key: 'artOuterY1', group: '区域', label: '卡图窗外框 · 下', type: 'range', min: 0, max: 1, step: 0.001, def: 0.717995 },
+    { key: 'artOuterX0', group: '区域', label: '卡图窗外框 · 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1009 },
+    { key: 'artOuterY0', group: '区域', label: '卡图窗外框 · 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1673 },
+    { key: 'artOuterX1', group: '区域', label: '卡图窗外框 · 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9003 },
+    { key: 'artOuterY1', group: '区域', label: '卡图窗外框 · 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7180 },
 
-    { key: 'artInnerX0', group: '区域', label: '怪物区（插画）· 左', type: 'range', min: 0, max: 1, step: 0.001, def: 0.118096 },
-    { key: 'artInnerY0', group: '区域', label: '怪物区（插画）· 上', type: 'range', min: 0, max: 1, step: 0.001, def: 0.173008,
+    { key: 'artInnerX0', group: '区域', label: '怪物区（插画）· 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1181 },
+    { key: 'artInnerY0', group: '区域', label: '怪物区（插画）· 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1730,
       hint: '上沿实测值 0.1730（≈205px）正好压在插画起点上；调小就是往上多盖一点' },
-    { key: 'artInnerX1', group: '区域', label: '怪物区（插画）· 右', type: 'range', min: 0, max: 1, step: 0.001, def: 0.883121 },
-    { key: 'artInnerY1', group: '区域', label: '怪物区（插画）· 下', type: 'range', min: 0, max: 1, step: 0.001, def: 0.706713 },
+    { key: 'artInnerX1', group: '区域', label: '怪物区（插画）· 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.8831 },
+    { key: 'artInnerY1', group: '区域', label: '怪物区（插画）· 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7067 },
 
-    { key: 'textBoxX0', group: '区域', label: '效果文字区 · 左', type: 'range', min: 0, max: 1, step: 0.001, def: 0.067550 },
-    { key: 'textBoxY0', group: '区域', label: '效果文字区 · 上', type: 'range', min: 0, max: 1, step: 0.001, def: 0.742185 },
-    { key: 'textBoxX1', group: '区域', label: '效果文字区 · 右', type: 'range', min: 0, max: 1, step: 0.001, def: 0.932450 },
-    { key: 'textBoxY1', group: '区域', label: '效果文字区 · 下', type: 'range', min: 0, max: 1, step: 0.001, def: 0.959510 },
+    { key: 'textBoxX0', group: '区域', label: '效果文字区 · 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.0675 },
+    { key: 'textBoxY0', group: '区域', label: '效果文字区 · 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7422 },
+    { key: 'textBoxX1', group: '区域', label: '效果文字区 · 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9325 },
+    { key: 'textBoxY1', group: '区域', label: '效果文字区 · 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9595 },
 
     // ---- ⑤ 调试 ----
     { key: 'maskDebug', group: '调试', label: '掩膜图层', type: 'check', def: 0, hint: '把"卡名 / 卡图 / 效果框 / 卡框"四块区域按颜色画出来，核对区域切得对不对' },
@@ -146,6 +148,18 @@
 
   // ------------------------------------------------------------------ hash ----
 
+  /**
+   * 一个 range 参数该保留几位小数 —— **直接由 step 推出来**（step=0.0001 → 4 位）。
+   *
+   * 面板读数、滑条、hash 编码三处共用这一个定义，免得又对不上：
+   * 以前读数写死两位（`Math.round(v*100)/100`），所以「区域」那组 step=0.0001 的参数
+   * 在面板上永远显示成 0.18 —— 0.183 和 0.188 看起来一模一样，根本没法调。
+   */
+  function decimalsOf(p) {
+    if (!p || !p.step || p.step >= 1) return 0;
+    return Math.min(6, Math.max(1, Math.ceil(-Math.log10(p.step) - 1e-9)));
+  }
+
   /** 把当前参数编码成 hash（位置编码，按 SPEC 顺序，逗号分隔） */
   function encode(params) {
     const parts = [];
@@ -154,7 +168,12 @@
       if (p.type === 'color') parts.push(String(v).replace('#', ''));
       else if (p.type === 'select' || p.type === 'card') parts.push(String(Math.round(v)));
       else if (p.type === 'check') parts.push(v ? '1' : '0');
-      else parts.push(String(Math.round(Number(v) * 1000) / 1000));
+      else {
+        // 精度跟着 step 走。以前写死 3 位，step=0.0001 的参数会在 hash 里被截掉一位 ——
+        // 复制链接发给别人，值就悄悄变了。
+        const k = Math.pow(10, decimalsOf(p));
+        parts.push(String(Math.round(Number(v) * k) / k));
+      }
     }
     return parts.join(',');
   }
@@ -214,6 +233,7 @@
     PRESETS: PRESETS,
     defaults: defaults,
     clampParam: clampParam,
+    decimalsOf: decimalsOf,
     hexToRgb: hexToRgb,
     rgbToHex: rgbToHex,
     encode: encode,

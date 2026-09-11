@@ -260,6 +260,22 @@ html, body {
 .prow-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .plabel { font-size: 12px; color: #b9c6dd; }
 .pval { font-size: 11px; color: #7d90b4; font-family: ui-monospace, Consolas, monospace; }
+/* 读数框：可键入精确值（滑条 1 像素跨几十步，光靠拖打不准 0.1800 这种值）。
+   宽度按最长的一档留（-1.0000 / 0.0000 这类 7 字符）。 */
+.pnum {
+  width: 72px;
+  text-align: right;
+  padding: 2px 5px;
+  color: #9fb4d8;
+  background: #0e1524;
+  border: 1px solid #24365a;
+  border-radius: 4px;
+  outline: none;
+}
+.pnum:focus { border-color: #3f6fd0; color: #d6e4ff; }
+.pnum::-webkit-outer-spin-button,
+.pnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pnum { -moz-appearance: textfield; }
 .prow input[type=range] {
   -webkit-appearance: none;
   appearance: none;
