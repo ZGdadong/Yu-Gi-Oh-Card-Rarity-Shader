@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>游戏王 罕贵度 · 工艺着色器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-t" data-i18n="app.title">游戏王 罕贵度</div>
+      <div class="brand-s" data-i18n="app.subtitle">OCG / TCG 工艺着色器</div>
+    </div>
+    <!-- 当前卡的信息：卡名 / 副标题 / 属性行走 i18n（键 card.<图片名>.*），
+         语言包里没有就退回图片文件名 —— 所以丢一张新图进来也不会变空白 -->
+    <div class="card-mini">
+      <div class="cm-name" id="card-name">Shooting Quasar Dragon</div>
+      <div class="cm-meta" id="card-sub"></div>
+      <div class="cm-meta" id="card-stats"></div>
+    </div>
+    <nav id="rarity-list"></nav>
+  </aside>
+
+  <main id="main">
+    <header id="topbar">
+      <label class="tb-field">
+        <span data-i18n="topbar.preset">预设</span>
+        <select id="sel-preset"></select>
+      </label>
+      <button id="btn-play" class="tb-btn" data-i18n-title="topbar.titlePlay">⏸ 暂停</button>
+      <button id="btn-reset" class="tb-btn" data-i18n-title="topbar.titleReset"><span data-i18n="topbar.reset">↻ 重置</span></button>
+      <button id="btn-panel" class="tb-btn" data-i18n-title="topbar.titlePanel"><span data-i18n="topbar.panel">⚙ 参数</span></button>
+      <button id="btn-link" class="tb-btn"><span data-i18n="topbar.copy">🔗 复制链接</span></button>
+      <label class="tb-field tb-lang">
+        <span data-i18n="topbar.lang">语言</span>
+        <select id="sel-lang"></select>
+        <button id="btn-lang-reload" class="tb-btn tb-btn-sm" title="重新扫描 Languages/ 下的语言包">⟳</button>
+      </label>
+      <span id="status" class="tb-status"></span>
+    </header>
+
+    <div id="stage">
+      <canvas id="gl"></canvas>
+      <canvas id="overlay"></canvas>
+    </div>
+
+    <div id="info">
+      <div class="info-head">
+        <span id="info-code" class="info-code">SR</span>
+        <span id="info-cn" class="info-cn">面闪</span>
+        <span id="info-en" class="info-en">Super Rare</span>
+        <button id="btn-info-toggle" class="info-toggle" title="收起 / 展开">▾</button>
+      </div>
+      <div class="info-grid" id="info-grid">
+        <div class="info-row"><b data-i18n="info.feature">特征</b><span id="info-feat"></span></div>
+        <div class="info-row"><b data-i18n="info.how">怎么做的</b><span id="info-render"></span></div>
+        <div class="info-row info-tech"><b data-i18n="info.layers">图层</b><span id="info-layers"></span></div>
+      </div>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <div class="panel-head">
+      <span data-i18n="panel.title">参数</span>
+      <button id="btn-panel-close" class="tb-btn" data-i18n-title="panel.close">✕</button>
+    </div>
+    <div id="panel-body"></div>
+  </aside>
+
+</div>
+
+<!-- 语言清单要先于 js/i18n.js：i18n 会照着清单动态注入各个语言包 -->
+<script src="Languages/languages.js"></script>
+<script src="js/i18n.js"></script>
+
+<!-- 经典 script，按依赖顺序；file:// 双击即可运行（卡图是 data URI 内嵌的）-->
+<script src="js/card-textures.js"></script>
+<script src="js/stamps.js"></script>
+<script src="js/shaders.js"></script>
+<script src="js/rarities.js"></script>
+<script src="js/config.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+/* 游戏王 罕贵度 · 工艺着色器 —— 界面样式（深色、克制，让卡片自己发光） */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #05070c;
+  color: #dfe7f5;
+  font: 14px/1.55 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 268px 1fr 0;
+  height: 100vh;
+  transition: grid-template-columns .18s ease;
+}
+#app.panel-open { grid-template-columns: 268px 1fr 312px; }
+
+/* ------------------------------------------------------------------ 侧栏 -- */
+
+#sidebar {
+  background: linear-gradient(180deg, #0a0e17, #070a11);
+  border-right: 1px solid #172033;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.brand { padding: 16px 16px 10px; }
+.brand-t { font-size: 17px; font-weight: 700; letter-spacing: .04em; }
+.brand-s { font-size: 11.5px; color: #6f7f9c; margin-top: 2px; }
+
+.card-mini {
+  margin: 4px 12px 10px;
+  padding: 9px 11px;
+  background: #0d1320;
+  border: 1px solid #1a2438;
+  border-radius: 8px;
+}
+.cm-name { font-size: 12.5px; font-weight: 700; color: #cfe0ff; letter-spacing: .02em; }
+.cm-meta { font-size: 10.5px; color: #6b7c99; margin-top: 2px; line-height: 1.4; }
+
+#rarity-list { overflow-y: auto; padding: 0 8px 20px; min-height: 0; flex: 1; }
+
+.tier-head {
+  font-size: 10.5px;
+  color: #5f7091;
+  letter-spacing: .08em;
+  padding: 12px 8px 5px;
+  text-transform: uppercase;
+}
+
+.ritem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 9px;
+  margin: 1px 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #b9c6dd;
+  cursor: pointer;
+  font: inherit;
+}
+.ritem:hover { background: #101828; border-color: #1b2740; }
+.ritem.active {
+  background: linear-gradient(90deg, #16233c, #101a2c);
+  border-color: #2b4a7d;
+  color: #f0f6ff;
+}
+.ritem .rcode {
+  font-size: 11.5px;
+  font-weight: 700;
+  min-width: 62px;
+  color: #8fb4ee;
+  font-family: ui-monospace, Consolas, monospace;
+}
+.ritem.active .rcode { color: #9ec5ff; }
+.ritem .rcn { font-size: 12px; }
+.ritem .rtag { margin-left: auto; font-size: 9.5px; color: #55658a; }
+.ritem .rtag.soft { color: #7a6a3a; }
+
+/* ------------------------------------------------------------------ 主区 -- */
+
+#main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #131b2a;
+  background: #070a11;
+  flex: 0 0 auto;
+}
+.tb-field { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #7b8aa8; white-space: nowrap; }
+.tb-field select {
+  background: #0e1524;
+  color: #d8e4f8;
+  border: 1px solid #1e2a42;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  min-width: 190px;
+}
+.tb-btn {
+  background: #0e1524;
+  color: #c3d1e8;
+  border: 1px solid #1e2a42;
+  border-radius: 6px;
+  padding: 5px 11px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.tb-btn:hover { background: #16203a; border-color: #2b4a7d; }
+.tb-status {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #5e6f8f;
+  font-family: ui-monospace, Consolas, monospace;
+  /* 空间不够时**截断**而不是折成好几行把顶栏撑高 */
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 语言条：放在最右边，和状态文字换位 —— 面板/说明都可能很长，语言下拉不该被挤走 */
+.tb-lang { margin-left: 10px; }
+.tb-lang select {
+  background: #0e1524;
+  color: #d8e4f8;
+  border: 1px solid #1e2a42;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  min-width: 96px;
+}
+.tb-btn-sm { padding: 4px 8px; font-size: 12px; }
+
+#stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+#gl, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#overlay { pointer-events: none; }
+
+/* --------------------------------------------------------------- 说明条 -- */
+/* 放在画布**下面**而不是浮在画布上：浮层会压住卡片下半截（效果框那一片正好是
+   最容易看清工艺的地方），挪到下面之后画布是完整的。 */
+
+#info {
+  flex: 0 0 auto;
+  padding: 9px 16px 11px;
+  background: #070a11;
+  border-top: 1px solid #131b2a;
+  max-height: 30vh;
+  overflow-y: auto;
+  position: relative;
+}
+/* 折叠：只留"代码 + 名称"那一行 —— 说明条本来就是可选的，占太多地方就成一整条黑边了 */
+#info.collapsed { padding: 6px 16px 7px; max-height: none; overflow: visible; }
+#info.collapsed .info-grid { display: none; }
+
+.info-toggle {
+  position: absolute;
+  top: 7px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  background: #0e1524;
+  color: #9fb2d0;
+  border: 1px solid #1e2a42;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.info-toggle:hover { background: #16203a; border-color: #2b4a7d; }
+
+.info-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; padding-right: 26px; }
+.info-code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd98a;
+  letter-spacing: .02em;
+}
+.info-cn { font-size: 14px; font-weight: 700; color: #f2f7ff; }
+.info-en { font-size: 11.5px; color: #7488ab; }
+.info-grid { margin-top: 4px; }
+.info-row { display: flex; gap: 9px; font-size: 12px; margin-top: 4px; color: #b6c5dd; line-height: 1.55; }
+.info-row b { flex: 0 0 62px; color: #6f83a8; font-weight: 600; }
+.info-row span { min-width: 0; }
+.info-row b + span b, .info-row span b { color: #e8f0ff; font-weight: 600; }
+.info-tech { color: #8d9dba; }
+.info-tech code, #info-layers code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  color: #9ec5ff;
+}
+.info-tech .sh {
+  display: inline-block;
+  padding: 0 5px;
+  margin: 0 3px 3px 0;
+  background: #14203a;
+  border: 1px solid #24365a;
+  border-radius: 4px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10.5px;
+  color: #9ec5ff;
+}
+
+/* ------------------------------------------------------------------ 面板 -- */
+
+#panel {
+  width: 312px;
+  background: #070a11;
+  border-left: 1px solid #172033;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+#app.panel-open #panel { display: flex; }
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #131b2a;
+  font-size: 13px;
+  font-weight: 600;
+  color: #cfe0ff;
+  flex: 0 0 auto;
+}
+#panel-body { overflow-y: auto; padding: 6px 12px 28px; min-height: 0; }
+
+.pgroup { margin-top: 12px; }
+.pgroup-h {
+  font-size: 11px;
+  color: #61729a;
+  letter-spacing: .1em;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #131b2a;
+  margin-bottom: 8px;
+}
+.prow { margin-bottom: 11px; }
+.prow-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.plabel { font-size: 12px; color: #b9c6dd; }
+.pval { font-size: 11px; color: #7d90b4; font-family: ui-monospace, Consolas, monospace; }
+.prow input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  margin: 7px 0 0;
+  background: #1c2540;
+  border-radius: 2px;
+  outline: none;
+}
+.prow input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #6ea3ff;
+  border: 2px solid #0b1220;
+  cursor: pointer;
+}
+.prow input[type=checkbox] { margin-right: 7px; accent-color: #6ea3ff; vertical-align: -1px; }
+.prow input[type=color] {
+  width: 46px; height: 22px; padding: 0;
+  border: 1px solid #24365a; border-radius: 4px; background: #0e1524; cursor: pointer;
+}
+.phint { font-size: 10.5px; color: #5c6b8c; margin-top: 4px; line-height: 1.45; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1b2436; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #26344e; }

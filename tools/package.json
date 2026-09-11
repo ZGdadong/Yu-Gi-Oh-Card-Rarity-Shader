@@ -1,0 +1,9 @@
+{
+  "name": "yugioh-rarity-shaders-verify",
+  "private": true,
+  "type": "module",
+  "description": "游戏王罕贵度工艺着色器的无头验证（开发用）。工具本身不依赖这里，只是 playwright-core 的解析路径。",
+  "dependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}
