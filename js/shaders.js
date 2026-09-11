@@ -54,7 +54,9 @@ uniform sampler2D uTex;       // 卡面（原始印刷）
 uniform sampler2D uMask;      // R卡名 G卡图 B效果框 A卡片剪影
 uniform sampler2D uStamp;     // 图案图集 4×2 格
 
-uniform vec4  uRectArtOuter;  // 卡图窗外框的矩形 (x0,y0,x1,y1)，卡片相对坐标
+uniform vec4  uRectArtOuter;  // 卡图窗外框的矩形 (x0,y0,x1,y1)，cardUV 坐标
+uniform vec4  uRectArtInner;  // 卡图窗内沿（插画本身）
+uniform vec4  uRectTextBox;   // 效果框（含 ATK/DEF 带）
 uniform vec4  uContent;       // 卡片内容在纹理里的归一化矩形（去掉四周留白）
 uniform vec2  uResolution;    // 目标像素尺寸
 uniform float uMargin;        // 卡图纹理四周留白比例
@@ -132,34 +134,39 @@ float rectMask(vec2 cu, vec4 r, float soft) {
  *   6 金属区（卡框+卡名+卡图外环）   7 卡框+卡图外环
  *   8 效果框里的字（按暗度从效果框里抠）   9 卡框+卡名   10 卡图+卡名
  *
- * 四块区域的来源：
- *   卡名 / 卡图 / 效果框 / 卡片剪影  → 掩膜纹理的 R / G / B / A
- *   卡框（= 卡片 − 卡图窗外框 − 效果框）与卡图外环（= 卡图窗外框 − 卡图内容）
- *    → 按 uRectArtOuter 这个矩形**现算**（为什么不烤进掩膜：见 embed-card.mjs 的注释）
+ * 五块区域的来源：
+ *   卡名（笔画）/ 卡片剪影 → 掩膜纹理的 R / A。**必须烘焙** —— 笔画是从图里按暗度抠的，
+ *      没法用矩形算出来。
+ *   卡图窗外框 / 卡图窗内沿 / 效果框 → 按 uRectArtOuter / uRectArtInner / uRectTextBox
+ *      三个矩形**现算**。这三块本来就是纯矩形、不依赖图像内容，挪到着色器里之后就能做成
+ *      侧栏「区域」那组滑条**实时可调**（拖一下立刻看得见，不用重烤一次 35 秒）。
+ *   卡框（= 卡片 − 卡图窗外框 − 效果框）与卡图外环（= 卡图窗外框 − 卡图内沿）由上面三块推出。
  */
 float pickMask(vec4 m, float sel, vec2 uv) {
     vec2 cu = cardUV(uv);
     float outer = rectMask(cu, uRectArtOuter, 0.006);
+    float inner = rectMask(cu, uRectArtInner, 0.005);
+    float text  = rectMask(cu, uRectTextBox, 0.005);
     float card = m.a;
-    float frame = card * (1.0 - outer) * (1.0 - m.b);
-    float ring = outer * (1.0 - m.g);
+    float frame = card * (1.0 - outer) * (1.0 - text);
+    float ring = outer * (1.0 - inner);
 
     float s = floor(sel + 0.5);
     if (s < 0.5) return card;
-    if (s < 1.5) return m.g;
+    if (s < 1.5) return inner;
     if (s < 2.5) return frame;
     if (s < 3.5) return m.r;
-    if (s < 4.5) return m.b;
-    if (s < 5.5) return max(m.g, frame);
+    if (s < 4.5) return text;
+    if (s < 5.5) return max(inner, frame);
     if (s < 6.5) return max(frame, ring);
     if (s < 7.5) return max(frame, ring);
     if (s < 8.5) {
         // 效果框里的字：效果框是白底黑字，所以按暗度抠
         float g = luma(texture(uTex, uv).rgb);
-        return m.b * (1.0 - smoothstep(0.25, 0.70, g));
+        return text * (1.0 - smoothstep(0.25, 0.70, g));
     }
     if (s < 9.5) return max(frame, m.r);
-    if (s < 10.5) return max(m.g, m.r);
+    if (s < 10.5) return max(inner, m.r);
     return card;
 }
 
@@ -246,13 +253,16 @@ vec4 effect(vec2 uv) {
 vec4 effect(vec2 uv) {
     vec4 t = texture(uTex, uv);
     vec4 m = texture(uMask, uv);
+    vec2 cu = cardUV(uv);
     float card = pickMask(m, 0.0, uv);
     float frame = pickMask(m, 2.0, uv);
-    float ring = rectMask(cardUV(uv), uRectArtOuter, 0.006) * (1.0 - m.g);
+    float inner = rectMask(cu, uRectArtInner, 0.005);
+    float text = rectMask(cu, uRectTextBox, 0.005);
+    float ring = rectMask(cu, uRectArtOuter, 0.006) * (1.0 - inner);
     vec3 c = vec3(0.09);
     c = mix(c, vec3(0.62), frame);
-    c = mix(c, vec3(0.25, 1.0, 0.35), m.g * 0.75);
-    c = mix(c, vec3(0.30, 0.45, 1.0), m.b * 0.75);
+    c = mix(c, vec3(0.25, 1.0, 0.35), inner * 0.75);
+    c = mix(c, vec3(0.30, 0.45, 1.0), text * 0.75);
     c = mix(c, vec3(1.0, 0.85, 0.20), ring * 0.85);
     c = mix(c, vec3(1.0, 0.25, 0.25), m.r);
     return vec4(c, t.a * card);

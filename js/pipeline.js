@@ -509,12 +509,44 @@
       this.u2f(prog, 'uViewPt', vp[0], vp[1]);
       this.u1f(prog, 'uAspect', this.spec.contentAspect);
       this.u1f(prog, 'uSeed', seed || 0);
-      const ao = this.spec.regions.artOuter;
-      this.u4f(prog, 'uRectArtOuter', [ao.x0, ao.y0, ao.x1, ao.y1]);
+      const rr = this.regionRects();
+      this.u4f(prog, 'uRectArtOuter', rr.artOuter);
+      this.u4f(prog, 'uRectArtInner', rr.artInner);
+      this.u4f(prog, 'uRectTextBox', rr.textBox);
       this.u4f(prog, 'uP0', p0);
       this.u4f(prog, 'uP1', p1);
       this.u4f(prog, 'uP2', p2);
       this.u4f(prog, 'uCol', [col[0], col[1], col[2], 1]);
+    }
+
+    /**
+     * 三块"工艺区域"的矩形（cardUV 坐标 = **整图相对**，x 向右、y 向下，v=0 是上沿）。
+     *
+     * 默认走侧栏「区域」那组滑条（手调值）；把「手动区域」关掉，就回到烘焙时按每张卡
+     * 自动检测、写进 js/card-textures.js 的那份值。
+     *
+     * 卡名带（nameBand）**不在这里** —— 它的笔画是从图里按暗度抠出来烤进掩膜 R 通道的，
+     * 没法用矩形算，所以运行时改不了（也不需要改：顶部卡名实测是对的）。
+     */
+    regionRects() {
+      const P = this.params;
+      const baked = this.spec.regions;
+      // u4f 是按下标取值的，所以**两条路都得返回数组** ——
+      // 烘焙出来的是 {x0,y0,x1,y1} 对象，直接丢给 u4f 会取到 undefined。
+      const arr = (r) => [r.x0, r.y0, r.x1, r.y1];
+      if (!P.regionManual) {
+        return {
+          artOuter: arr(baked.artOuter),
+          artInner: arr(baked.artInner),
+          textBox: arr(baked.textBox)
+        };
+      }
+      const rect = (k) => [P[k + 'X0'], P[k + 'Y0'], P[k + 'X1'], P[k + 'Y1']];
+      return {
+        artOuter: rect('artOuter'),
+        artInner: rect('artInner'),
+        textBox: rect('textBox')
+      };
     }
 
     /** 顶点阶段的相机 / 倾斜 */

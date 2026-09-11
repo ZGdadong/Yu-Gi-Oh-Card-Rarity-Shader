@@ -61,7 +61,36 @@
     { key: 'stampAmount', group: '工艺', label: '水印浓度', type: 'range', min: 0, max: 1, step: 0.01, def: 1 },
     { key: 'glitterSize', group: '工艺', label: '闪粉粗细', type: 'range', min: 10, max: 120, step: 1, def: 46 },
 
-    // ---- ③ 调试 ----
+    // ---- ④ 区域（怪物区 / 文字区）----
+    // 这三块矩形原本是烘焙时按每张卡检测出来、写进 js/card-textures.js 的。
+    // 但它们本来就是**纯矩形**（不依赖图像内容），所以已挪到着色器里现算 ——
+    // 现在拖滑条**实时生效**，不用重烤（重烤一次要 35 秒，没法调）。
+    // 卡名带不在其中：笔画是从图里按暗度抠进掩膜 R 通道的，矩形算不出来 ——
+    // 而且顶部卡名实测是对的，不用调。
+    //
+    // 坐标是 **cardUV**（整图相对，0..1；y 向下，0 = 图片上沿）。
+    // 想换算成像素：x × 813，y × 1185。
+    //   例：artInnerY0 = 0.1730 → 0.1730 × 1185 ≈ 205px
+    { key: 'regionManual', group: '区域', label: '手动区域', type: 'check', def: 1,
+      hint: '打开时下面 12 根滑条生效；关掉就回到每张卡烘焙时自动检测出来的值（两者默认值相同，所以开关本身不改变画面）' },
+
+    { key: 'artOuterX0', group: '区域', label: '卡图窗外框 · 左', type: 'range', min: 0, max: 1, step: 0.001, def: 0.100873 },
+    { key: 'artOuterY0', group: '区域', label: '卡图窗外框 · 上', type: 'range', min: 0, max: 1, step: 0.001, def: 0.167271 },
+    { key: 'artOuterX1', group: '区域', label: '卡图窗外框 · 右', type: 'range', min: 0, max: 1, step: 0.001, def: 0.900344 },
+    { key: 'artOuterY1', group: '区域', label: '卡图窗外框 · 下', type: 'range', min: 0, max: 1, step: 0.001, def: 0.717995 },
+
+    { key: 'artInnerX0', group: '区域', label: '怪物区（插画）· 左', type: 'range', min: 0, max: 1, step: 0.001, def: 0.118096 },
+    { key: 'artInnerY0', group: '区域', label: '怪物区（插画）· 上', type: 'range', min: 0, max: 1, step: 0.001, def: 0.173008,
+      hint: '上沿实测值 0.1730（≈205px）正好压在插画起点上；调小就是往上多盖一点' },
+    { key: 'artInnerX1', group: '区域', label: '怪物区（插画）· 右', type: 'range', min: 0, max: 1, step: 0.001, def: 0.883121 },
+    { key: 'artInnerY1', group: '区域', label: '怪物区（插画）· 下', type: 'range', min: 0, max: 1, step: 0.001, def: 0.706713 },
+
+    { key: 'textBoxX0', group: '区域', label: '效果文字区 · 左', type: 'range', min: 0, max: 1, step: 0.001, def: 0.067550 },
+    { key: 'textBoxY0', group: '区域', label: '效果文字区 · 上', type: 'range', min: 0, max: 1, step: 0.001, def: 0.742185 },
+    { key: 'textBoxX1', group: '区域', label: '效果文字区 · 右', type: 'range', min: 0, max: 1, step: 0.001, def: 0.932450 },
+    { key: 'textBoxY1', group: '区域', label: '效果文字区 · 下', type: 'range', min: 0, max: 1, step: 0.001, def: 0.959510 },
+
+    // ---- ⑤ 调试 ----
     { key: 'maskDebug', group: '调试', label: '掩膜图层', type: 'check', def: 0, hint: '把"卡名 / 卡图 / 效果框 / 卡框"四块区域按颜色画出来，核对区域切得对不对' },
     { key: 'sheetOn', group: '调试', label: '一览模式', type: 'check', def: 0, hint: '把全部罕贵度铺成一张对照表（这一屏不看单个卡片的细节）' },
     { key: 'layerOnly', group: '调试', label: '只看第一层', type: 'check', def: 0, hint: '只画配方的第一层，其余层跳过 —— 用来单独看某个工艺' },
@@ -171,6 +200,7 @@
     { name: '⑯ 马赛克 Mosaic', patch: { rarity: R('MOSAIC'), cardSize: 0.86 } },
     { name: '⑰ 碎箔 Shatterfoil', patch: { rarity: R('SHATTERFOIL'), cardSize: 0.86 } },
     { name: '★ 掩膜调试', patch: { rarity: R('SR'), maskDebug: 1, cardSize: 0.95 } },
+    { name: '★ 区域：回到烘焙值', patch: { regionManual: 0 } },
     { name: '★ 图案图集', patch: { rarity: R('N'), stampCells: 1 } },
     { name: '★★ 一览全部罕贵度', patch: { rarity: R('SR'), sheetOn: 1 } },
     { name: '★★ 纯卡面（不加工）', patch: { rarity: R('N'), intensity: 0, cardSize: 0.95 } }
