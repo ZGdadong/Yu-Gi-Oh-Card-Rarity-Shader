@@ -71,27 +71,31 @@
     //
     // 坐标是 **cardUV**（整图相对，0..1；y 向下，0 = 图片上沿）。
     // 想换算成像素：x × 813，y × 1185。
-    //   例：artInnerY0 = 0.1730 → 0.1730 × 1185 ≈ 205px
+    //   例：artInnerY0 = 0.1813 → 0.1813 × 1185 ≈ 215px
     // 步长 0.0001 = 第 4 位小数：约 0.08px（横）/ 0.12px（纵）——
     // 够细，而且读数框可以直接键入精确值（滑条 1 像素 ≈ 50 步，光靠拖是打不准的）。
+    //
+    // ⚠️ 下面这 8 个默认值是**手调**出来的，跟烘焙时自动检测的那份（regionManual 关掉时
+    //    用的 js/card-textures.js 的 regions）**已经不一样了** ——
+    //    别再假设"只切开关画面不变"。
     { key: 'regionManual', group: '区域', label: '手动区域', type: 'check', def: 1,
-      hint: '打开时下面 12 根滑条生效；关掉就回到每张卡烘焙时自动检测出来的值（两者默认值相同，所以开关本身不改变画面）' },
+      hint: '打开时下面 12 根滑条生效；关掉就回到每张卡烘焙时自动检测出来的值 —— 那份还停在实测口径，跟现在这版手调默认值不一样，所以只切开关画面就会变' },
 
     { key: 'artOuterX0', group: '区域', label: '卡图窗外框 · 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1009 },
     { key: 'artOuterY0', group: '区域', label: '卡图窗外框 · 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1673 },
     { key: 'artOuterX1', group: '区域', label: '卡图窗外框 · 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9003 },
     { key: 'artOuterY1', group: '区域', label: '卡图窗外框 · 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7180 },
 
-    { key: 'artInnerX0', group: '区域', label: '怪物区（插画）· 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1181 },
-    { key: 'artInnerY0', group: '区域', label: '怪物区（插画）· 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1730,
-      hint: '上沿实测值 0.1730（≈205px）正好压在插画起点上；调小就是往上多盖一点' },
-    { key: 'artInnerX1', group: '区域', label: '怪物区（插画）· 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.8831 },
-    { key: 'artInnerY1', group: '区域', label: '怪物区（插画）· 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7067 },
+    { key: 'artInnerX0', group: '区域', label: '怪物区（插画）· 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1180 },
+    { key: 'artInnerY0', group: '区域', label: '怪物区（插画）· 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.1813,
+      hint: '默认 0.1813（≈215px）—— 比实测的插画上沿 0.1730（≈205px）低约 10px，也就是刻意不贴着插画顶边；调小就是往上多盖一点' },
+    { key: 'artInnerX1', group: '区域', label: '怪物区（插画）· 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.8855 },
+    { key: 'artInnerY1', group: '区域', label: '怪物区（插画）· 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7033 },
 
-    { key: 'textBoxX0', group: '区域', label: '效果文字区 · 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.0675 },
-    { key: 'textBoxY0', group: '区域', label: '效果文字区 · 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7422 },
-    { key: 'textBoxX1', group: '区域', label: '效果文字区 · 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9325 },
-    { key: 'textBoxY1', group: '区域', label: '效果文字区 · 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9595 },
+    { key: 'textBoxX0', group: '区域', label: '效果文字区 · 左', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.0510 },
+    { key: 'textBoxY0', group: '区域', label: '效果文字区 · 上', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.7420 },
+    { key: 'textBoxX1', group: '区域', label: '效果文字区 · 右', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9480 },
+    { key: 'textBoxY1', group: '区域', label: '效果文字区 · 下', type: 'range', min: 0, max: 1, step: 0.0001, def: 0.9467 },
 
     // ---- ⑤ 调试 ----
     { key: 'maskDebug', group: '调试', label: '掩膜图层', type: 'check', def: 0, hint: '把"卡名 / 卡图 / 效果框 / 卡框"四块区域按颜色画出来，核对区域切得对不对' },
