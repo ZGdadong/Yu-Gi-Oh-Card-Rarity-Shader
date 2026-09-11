@@ -653,12 +653,8 @@
         this.u1f(bg, 'uMargin', this.spec.margin);
         this.u1f(bg, 'uAspect', this.spec.aspect);
         this.u1f(bg, 'uTime', this.time);
-        // 底色亮度 / 暗角都做成参数了。默认那组（底色 ×0.55 的暗端 + 暗角 0.55 双重压暗）
-        // 会把画面下方打到 13/255（≈5%）；卡片又大又靠下，于是"卡片下方那圈背景"
-        // 看起来就是凭空多出来的一条黑边 —— 而且它是**背景**，不跟着卡片圆角变。
-        const bb = P.bgBright;
-        this.u4f(bg, 'uCol', [0.090 * bb, 0.104 * bb, 0.142 * bb, 1]);
-        this.u4f(bg, 'uP0', [1, P.bgVignette, 0, 0]);
+        this.u4f(bg, 'uCol', [0.090, 0.104, 0.142, 1]);
+        this.u4f(bg, 'uP0', [1, 0.55, 0, 0]);
         this.u4f(bg, 'uP1', [P.bgSpin * 1.30, 0, 0, 0]);
         this.u4f(bg, 'uP2', [0, 0, 0, 0]);
         this.bindQuad('screen');
