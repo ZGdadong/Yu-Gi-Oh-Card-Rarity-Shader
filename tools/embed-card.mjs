@@ -65,15 +65,22 @@ const REGIONS = {
   starBand:   { x0: 0.0400, y0: 0.1000, x1: 0.9600, y1: 0.1520 }
 };
 
-// 抠卡名笔画用的暗度阈值与膨胀半径
-const NAME_INK = { lo: 0.62, hi: 0.80, dilate: 2 };
+// 抠卡名笔画的参数。
+//   auto:true  —— **自动**判极性 + 自动定阈值（默认，见下面"卡名笔画"那一段）
+//   auto:false —— 退回 lo/hi 这两个**绝对**灰度阈值，口径是"暗 = 笔画"
+//                 只给自动模式栽掉的怪卡手工兜底用，写进 CARDS[文件名].nameInk
+//   ramp       —— 阈值两侧的软过渡半宽（灰度 0..1）。字缘要利落，别铺太宽
+//   dilate     —— 笔画膨胀次数（1 次 = 3×3 取最大，约 1px）
+const NAME_INK = { auto: true, lo: 0.62, hi: 0.80, ramp: 0.045, dilate: 2 };
 
 // 每张卡可以单独覆盖上面的东西（文件名 → 覆盖项）。留空表示全都用默认。
 const CARDS = {
-  // 例：
-  // 'Some Pendulum Card.jpg': {
+  // 卡名笔画已经是**自动**判极性 + 自动定阈值的（Otsu + 少数派），
+  // 橙 / 紫 / 蓝 / 白 / 黑 各色卡框都能跟住，连超量那种"白字黑底"也不用管。
+  // 只有自动模式真的栽了的怪卡才需要在这里钉死：
+  // 'Some Weird Card.jpg': {
   //   regions: { textBox: { x0: 0.04, y0: 0.62, x1: 0.96, y1: 0.80 } },
-  //   nameInk: { lo: 0.30, hi: 0.55, dilate: 2 }   // 深底金字得反过来
+  //   nameInk: { auto: false, lo: 0.30, hi: 0.55, dilate: 2 }   // 钉死绝对阈值
   // }
 };
 
@@ -203,15 +210,79 @@ for (const file of files) {
     const R = {};
     for (const k of Object.keys(regions)) R[k] = rectPx(regions[k]);
 
-    // 卡名暗度位图
+    // ---- 卡名笔画 ----
+    // 卡名带的**底色就是卡框色**，而游戏王这一点花色极多，字色还跟着一起变：
+    //   橙(效果) / 紫(融合) / 蓝(仪式) / 白(同调) / 深蓝(连接) → 深字浅底
+    //   黑(超量)                                              → **白字黑底，极性相反**
+    // 所以"暗 = 笔画"这种固定阈值**原理上就不可能通用** —— 实测橙框 luma≈0.60、
+    // 蓝框≈0.29、黑框≈0.05，全部低于旧阈值 lo=0.62，整条名带被判成笔画。
+    // （tools/verify.mjs 的 C 段正是这么抓到的：笔画 40180px = 名带全满，底板 0px。）
+    //
+    // 现在改成两步自适应，不依赖任何绝对灰度：
+    //   ① Otsu 在名带灰度直方图上找类间方差最大的阈值；
+    //   ② **像素少的那一类算笔画**（字永远只占名带一小块），极性由两类平均亮度决定
+    //      （暗的那类少 → 深字浅底；亮的那类少 → 白字黑底）。
+    // 自动模式仍可能栽在"名带里有两块面积相当的深浅区域"的怪图上（比如金碎那种
+    // 强金属渐变把直方图摊平）。那种卡用 CARDS[文件名].nameInk = { auto:false, lo, hi } 钉死。
     const ink = new Uint8Array(dw * dh);
     const nb = R.nameBand;
-    for (let y = Math.max(0, Math.floor(nb.y0)); y < Math.min(dh, Math.ceil(nb.y1)); y++) {
-      for (let x = Math.max(0, Math.floor(nb.x0)); x < Math.min(dw, Math.ceil(nb.x1)); x++) {
+    const bx0 = Math.max(0, Math.floor(nb.x0)), bx1 = Math.min(dw, Math.ceil(nb.x1));
+    const by0 = Math.max(0, Math.floor(nb.y0)), by1 = Math.min(dh, Math.ceil(nb.y1));
+
+    let inkIsDark = true, otsuL = 0.71;
+    let inkStats = { mode: nameInk.auto ? 'auto' : 'fixed' };
+
+    if (nameInk.auto) {
+      const hist = new Float64Array(256);
+      let bandN = 0;
+      for (let y = by0; y < by1; y++) for (let x = bx0; x < bx1; x++) {
         const i = (y * dw + x) << 2;
         if (cp[i + 3] < 8) continue;
         const l = (0.2126 * cp[i] + 0.7152 * cp[i + 1] + 0.0722 * cp[i + 2]) / 255;
-        const t = (nameInk.hi - l) / (nameInk.hi - nameInk.lo);
+        hist[Math.max(0, Math.min(255, Math.round(l * 255)))]++;
+        bandN++;
+      }
+      let total = 0;
+      for (let k = 0; k < 256; k++) total += k * hist[k];
+      // Otsu：让两类之间方差最大的那个灰度
+      let wB = 0, sumB = 0, bestVar = -1, best = 128;
+      for (let k = 0; k < 256; k++) {
+        wB += hist[k];
+        if (wB === 0) continue;
+        const wF = bandN - wB;
+        if (wF === 0) break;
+        sumB += k * hist[k];
+        const mB = sumB / wB, mF = (total - sumB) / wF;
+        const v = wB * wF * (mB - mF) * (mB - mF);
+        if (v > bestVar) { bestVar = v; best = k; }
+      }
+      let nDark = 0, sumDark = 0;
+      for (let k = 0; k <= best; k++) { nDark += hist[k]; sumDark += k * hist[k]; }
+      const nBright = bandN - nDark;
+      const mDark = nDark ? sumDark / nDark : 0;
+      const mBright = nBright ? (total - sumDark) / nBright : 255;
+      inkIsDark = nDark <= nBright;            // 少数派 = 笔画
+      otsuL = best / 255;
+      inkStats = {
+        mode: 'auto',
+        otsu: +otsuL.toFixed(3),
+        polarity: inkIsDark ? 'dark' : 'bright',
+        gap: +((mBright - mDark) / 255).toFixed(3),
+        inkFrac: +((inkIsDark ? nDark : nBright) / bandN).toFixed(4)
+      };
+    }
+
+    const rw = nameInk.ramp;
+    for (let y = by0; y < by1; y++) {
+      for (let x = bx0; x < bx1; x++) {
+        const i = (y * dw + x) << 2;
+        if (cp[i + 3] < 8) continue;
+        const l = (0.2126 * cp[i] + 0.7152 * cp[i + 1] + 0.0722 * cp[i + 2]) / 255;
+        const t = nameInk.auto
+          // 以 Otsu 阈值为中心、±rw 软过渡；极性翻，过渡方向跟着翻
+          ? (inkIsDark ? (otsuL + rw - l) : (l - (otsuL - rw))) / (2 * rw)
+          // 手工兜底：沿用旧的"暗 = 笔画"绝对阈值
+          : (nameInk.hi - l) / (nameInk.hi - nameInk.lo);
         ink[y * dw + x] = Math.max(0, Math.min(1, t)) * 255;
       }
     }
@@ -320,6 +391,7 @@ for (const file of files) {
       dataUri: tex.toDataURL(FORMAT, QUALITY),
       maskUri: mtex.toDataURL('image/png'),
       maskPreview: pv.toDataURL('image/png'),
+      inkStats: inkStats,
       coverage: { name: inkN / n, art: artN / n, text: textN / n, frame: frameN / n, ring: ringN / n, opaque: n / (dw * dh) }
     };
   }, ['data:' + mime + ';base64,' + srcBytes.toString('base64'), MARGIN, CONTENT_H, FORMAT, QUALITY, regions, nameInk, override.cornerRadius, DETECT_SRC]);
@@ -345,6 +417,15 @@ for (const file of files) {
     '· 效果框', (res.coverage.text * 100).toFixed(1) + '%',
     '· 卡框', (res.coverage.frame * 100).toFixed(1) + '%',
     '· 外环', (res.coverage.ring * 100).toFixed(1) + '%');
+  {
+    const s = res.inkStats;
+    const how = s.mode === 'auto'
+      ? `自动 Otsu 阈 ${s.otsu} · 极性 ${s.polarity === 'dark' ? '深字浅底' : '白字黑底'} · 两类亮度差 ${s.gap} · 笔画占名带 ${(s.inkFrac * 100).toFixed(1)}%`
+      : '手工钉死（CARDS 覆盖里给了绝对阈值）';
+    // 名带被整条填满 = 极性判错或阈值失效，直接喊出来，别让它悄悄过去
+    const bad = (s.mode === 'auto' && (s.gap < 0.12 || s.inkFrac > 0.5)) || res.coverage.name > 0.06;
+    console.log('   卡名笔画   :', how, bad ? '  ⚠️ 可疑，去 CARDS 里手工钉 nameInk' : '');
+  }
   console.log('   编码       : 卡图', (res.dataUri.length / 1024).toFixed(0), 'KB · 掩膜', (res.maskUri.length / 1024).toFixed(0), 'KB');
 
   built.push({
@@ -360,6 +441,7 @@ for (const file of files) {
     contentWidth: res.contentW, contentHeight: res.contentH,
     contentAspect: res.aspect,
     regions, nameInk,
+    nameInkStats: res.inkStats,
     maskCoverage: res.coverage,
     dataUri: res.dataUri, maskUri: res.maskUri
   });
@@ -394,6 +476,9 @@ const body = built.map((b) => `  {
     // 工艺区域（卡片相对比例，v=0 是卡片上沿）
     regions: ${JSON.stringify(b.regions, null, 2).split('\n').join('\n    ')},
     nameInk: ${JSON.stringify(b.nameInk)},
+    // 卡名笔画是怎么定出来的：自动 Otsu 的阈值 / 判出来的极性 / 两类亮度差 / 笔画占名带比例
+    // （极性 = 'bright' 就是超量那种"白字黑底"，着色器不用管，掩膜已经是对的）
+    nameInkStats: ${JSON.stringify(b.nameInkStats)},
     maskCoverage: ${JSON.stringify(b.maskCoverage)},
     dataUri: ${JSON.stringify(b.dataUri)},
     maskUri: ${JSON.stringify(b.maskUri)}
@@ -411,7 +496,7 @@ const header = `/*
  *      · 卡片外沿是**自动识别**的（找整行/整列一起跳变的硬边），识别不出来就退化成整张图
  *      · 卡图缩放到内容高 ${CONTENT_H}px、四周补 ${(MARGIN * 100).toFixed(0)}% 透明留白、削圆角
  *   ② mask 的通道：
- *        R = 卡名笔画（从图里按暗度抠出来再膨胀 ${NAME_INK.dilate}px）
+ *        R = 卡名笔画（Otsu 自动分割 + 自动判极性，再膨胀 ${NAME_INK.dilate}px）
  *        G = 卡图内容区（插画本身，不含四周深色框）
  *        B = 效果框（含 ATK/DEF 带）
  *        A = **卡片自身的剪影**（卡内处处为 1）

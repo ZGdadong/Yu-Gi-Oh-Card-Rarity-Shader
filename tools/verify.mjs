@@ -143,7 +143,8 @@ const texInfo = await page.evaluate(async () => {
     declared: T.maskCoverage,
     inkLuma: inkN ? inkLuma / inkN : 0, plateLuma: plateN ? plateLuma / plateN : 0,
     inkN: inkN, plateN: plateN,
-    name: T.name, cornerRadius: T.cornerRadius
+    name: T.name, cornerRadius: T.cornerRadius,
+    nameInkStats: T.nameInkStats
   };
 });
 
@@ -174,14 +175,40 @@ check('卡片长宽比接近实卡的 59:86 = 0.6860',
 // ------------------------------------------------------------ C. 掩膜语义 ----
 section('C. 掩膜语义');
 
-check('"卡名笔画"掩膜确实落在黑字上（笔画区明显比底板暗）',
-  texInfo.inkLuma < texInfo.plateLuma - 0.35,
-  `笔画区平均亮度 ${texInfo.inkLuma.toFixed(3)} vs 底板 ${texInfo.plateLuma.toFixed(3)}（笔画 ${texInfo.inkN} px）`);
+// 这条断言原来写死成"笔画必须比底板**暗** 0.35" —— 那是拿白框同调（Shooting Quasar，
+// 笔画 0.49 / 底板 0.89）标定出来的。卡框色一变就不成立：
+//   · 紫框融合（A-to-Z）：底板只有 0.365，对比度天然只有 ~0.17，够不到 0.35
+//   · 黑框超量（Raidraptor）：根本是**白字黑底**，方向整个反过来
+// 正确的不变量是"笔画与底板明显分离，且方向与烘焙时自动判出的极性一致"。
+const inkPol = texInfo.nameInkStats ? texInfo.nameInkStats.polarity : 'dark';
+const inkSep = inkPol === 'bright' ? texInfo.inkLuma - texInfo.plateLuma : texInfo.plateLuma - texInfo.inkLuma;
+check('"卡名笔画"掩膜确实落在字上（与底板明显分离，方向符合自动判出的极性）',
+  inkSep > 0.15,
+  `极性 ${inkPol === 'bright' ? '白字黑底' : '深字浅底'} · 笔画区 ${texInfo.inkLuma.toFixed(3)} vs 底板 ${texInfo.plateLuma.toFixed(3)}（分离 ${inkSep.toFixed(3)}，笔画 ${texInfo.inkN} px）`);
 
 check('卡名笔画占比合理（1% ~ 6%）', c.name > 0.01 && c.name < 0.06, (c.name * 100).toFixed(2) + '%');
 check('卡图窗占比合理（35% ~ 55%）', c.art > 0.35 && c.art < 0.55, (c.art * 100).toFixed(1) + '%');
 check('效果框占比合理（15% ~ 28%）', c.text > 0.15 && c.text < 0.28, (c.text * 100).toFixed(1) + '%');
 check('卡框占比合理（20% ~ 40%）', c.frame > 0.20 && c.frame < 0.40, (c.frame * 100).toFixed(1) + '%');
+
+// 上面几条只看 list[0]，也就是**一种卡框色**。但游戏王的卡框色五花八门
+//（橙效果 / 紫融合 / 蓝仪式 / 白同调 / 黑超量 / 深蓝连接…），字色还跟着变极性。
+// 这里把**每张卡**烘焙时记录的卡名笔画统计过一遍 —— 谁被整条填满、谁的两类亮度差
+// 小到不可信，都在这里拦下。这是"换一张卡进去能不能不翻车"的护栏。
+const inkAudit = await page.evaluate(() => window.CardTextures.list.map((t) => ({
+  id: t.id,
+  name: t.maskCoverage.name,
+  mode: t.nameInkStats && t.nameInkStats.mode,
+  pol: t.nameInkStats && t.nameInkStats.polarity,
+  gap: t.nameInkStats && t.nameInkStats.gap,
+  frac: t.nameInkStats && t.nameInkStats.inkFrac
+})));
+check('每张卡的卡名笔画占比都在 1% ~ 6%（没有哪张被整条名带填满）',
+  inkAudit.every((a) => a.name > 0.01 && a.name < 0.06),
+  inkAudit.map((a) => `${a.id.slice(0, 20)} ${(a.name * 100).toFixed(2)}%`).join(' · '));
+check('每张卡的卡名极性都是自动判出来的，且两类亮度差够（≥ 0.12）',
+  inkAudit.every((a) => a.mode === 'auto' && a.gap >= 0.12 && a.frac <= 0.5),
+  inkAudit.map((a) => `${a.id.slice(0, 20)} ${a.pol === 'bright' ? '白字黑底' : '深字浅底'}/${a.gap}`).join(' · '));
 
 // ------------------------------------------------------------ D. 罕贵度表 ----
 section('D. 罕贵度表');
@@ -403,8 +430,12 @@ check('打开面板后画布跟着重新分配尺寸（不是被 CSS 缩小）',
 check('关掉面板后画布恢复到原尺寸',
   fits(layout.back) && Math.abs(layout.back.cssW - layout.closed.cssW) <= 1,
   `${layout.back.cssW}`);
+// 0.6729 是**旧的那张卡**（Shooting Quasar，749×1113）的纹理长宽比 —— 单卡时代刻死的。
+// 现在 images/ 下有几张就几张，长宽比各不相同（A-to-Z 0.6855 / Raidraptor 0.6861 …），
+// 刻死的常数必然误报。改成跟当前卡的实测长宽比比。
 check('卡片长宽比始终等于纹理长宽比（没有被拉伸）',
-  Math.abs(layout.cardAspect - 0.6729) < 0.002, layout.cardAspect.toFixed(4));
+  Math.abs(layout.cardAspect - texInfo.contentAspect) < 0.002,
+  `${layout.cardAspect.toFixed(4)} vs 当前卡 ${texInfo.contentAspect.toFixed(4)}（${texInfo.name}）`);
 
 // 卡片只按画布高算尺寸的话，窗口一窄就会被裁掉两边；这里把中间那一列压到很窄试一次。
 // 注意：**不要去动 stage 自己的 flex** —— 它是 flex:1 撑高的，改成 flex:0 0 auto
