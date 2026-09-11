@@ -43,13 +43,22 @@ mkdirSync(outDir, { recursive: true });
 const argv = process.argv.slice(2);
 const flag = (n, d) => { const i = argv.indexOf('--' + n); return i < 0 ? d : argv[i + 1]; };
 const ONLY = flag('only', null);
-const MARGIN = 0.04;         // 纹理四周留白（给投影/倾斜留位置）
-const CONTENT_H = parseInt(flag('height', '1024'), 10);
+// ★ 卡面 = 整张原图：不裁、不缩、不留白 ★
+//
+// 之前的做法是"自动识别卡片外沿 → 裁出来 → 缩到 1024 高 → 四周补 4% 留白"。
+// 但融合紫框 / 超量黑框这两张的卡沿和背景几乎同色，外沿被内部边（效果框那条横线）
+// 抢走，卡片下沿连同原图那条很有质感的黑边整条被裁掉，shader 的卡图窗跟着上移 25px。
+//
+// 原图本来就是**成品**：813×1185、四边 26px 居中留白、边缘自带黑边。直接用整张就行。
+// 外沿检测仍然跑，但**只用来把"卡片相对"的区域常量映射到整图坐标**（见 §1），
+// 不再决定裁到哪儿 —— 检测准不准都不影响画面完整性，只影响掩膜区域贴得准不准。
+const MARGIN = 0;            // 纹理四周留白。0 = 原图即卡面
 const FORMAT = 'image/webp';
 const QUALITY = 0.95;
-const CORNER_R = 0;          // 圆角半径的**兜底值**（占卡宽比例），0 = 不削圆角。
-                             // 正常情况下是按图量的（见下面的 cornerPx）；量不出来就按 0 处理 ——
-                             // 宁可方角也不要凭空削掉卡片自己的角（这张卡量的结果就是 0：方角）。
+// 圆角半径（**原图像素**）。5 ≈ 实体卡的倒角观感；--corner 0 就是不削。
+// 只削纹理的 alpha 通道就够：每个工艺着色器返回的都是 vec4(col, tex.a * 覆盖度)
+//（js/shaders.js:28），所有图层都乘 tex.a，会跟着一起被削，不用动着色器。
+const CORNER_PX = parseInt(flag('corner', '5'), 10);
 
 // 区域（**卡片相对**比例，0..1；v=0 是卡片上沿，与 LÖVE 的纹理坐标约定一致）
 const REGIONS = {
@@ -116,7 +125,7 @@ for (const file of files) {
   const archive = join(resolve(projectRoot, 'assets'), file);
   copyFileSync(srcPath, archive);
 
-  const res = await page.evaluate(async ([dataUri, MARGIN, CONTENT_H, FORMAT, QUALITY, regions, nameInk, cornerOverride, detectSrc]) => {
+  const res = await page.evaluate(async ([dataUri, FORMAT, QUALITY, regions, nameInk, cornerOverride, defaultCornerPx, detectSrc]) => {
     // 把共享的检测器注入到页面作用域
     eval(detectSrc);
     const img = new Image(); img.src = dataUri; await img.decode();
@@ -135,49 +144,33 @@ for (const file of files) {
     const cw0 = CARD.x1 - CARD.x0, ch0 = CARD.y1 - CARD.y0;
     const aspect = cw0 / ch0;
 
-    // ---- 1. 缩放到目标高度，算出最终纹理尺寸 ----
-    const scale = CONTENT_H / ch0;
-    const dw = Math.round(cw0 * scale), dh = CONTENT_H;
-    const texW = Math.round(dw / (1 - 2 * MARGIN));
-    const texH = Math.round(dh / (1 - 2 * MARGIN));
-    const ox = Math.round((texW - dw) / 2), oy = Math.round((texH - dh) / 2);
+    // ---- 1. 卡面 = 整张原图；区域常量换算到整图坐标 ----
+    // 着色器里的 cardUV 是"纹理 0..1"，所以区域常量必须落在**整图**坐标系里。
+    // 卡片在整图里的位置由检测到的 CARD 给出，逐区域线性映射过去即可。
+    const dw = W, dh = H;                  // 内容 = 整图
+    const texW = W, texH = H;              // 纹理 = 内容（MARGIN = 0）
+    const ox = 0, oy = 0;
+    const mapped = {};
+    for (const k of Object.keys(regions)) {
+      const r = regions[k];
+      mapped[k] = {
+        x0: (CARD.x0 + r.x0 * cw0) / W, y0: (CARD.y0 + r.y0 * ch0) / H,
+        x1: (CARD.x0 + r.x1 * cw0) / W, y1: (CARD.y0 + r.y1 * ch0) / H
+      };
+    }
 
-    // ---- 2. 卡片本体：裁出来 → 圆角 alpha → 贴进带留白的纹理 ----
+    // ---- 2. 卡面本体：整图原样画上去（随后只削圆角 alpha）----
     const cardCv = document.createElement('canvas'); cardCv.width = dw; cardCv.height = dh;
     const cctx = cardCv.getContext('2d', { willReadFrequently: true });
     cctx.imageSmoothingEnabled = true; cctx.imageSmoothingQuality = 'high';
-    cctx.drawImage(srcCv, CARD.x0, CARD.y0, cw0, ch0, 0, 0, dw, dh);
+    cctx.drawImage(srcCv, 0, 0);
 
-    // 圆角半径：沿卡片左沿往里扫，找"卡片边界那根硬边"第几行才回到最左边。
-    // 用**边缘跳变**而不是"跟背景色比" —— 卡片外圈有一层投影，紧贴卡片的那几列
-    // 本身就是暗的，"跟背景色差多少"这条判据会被投影骗过去（第一版就是这么写的，
-    // 结果 90 行里一次都没命中，白写了一段永远不会执行的代码）。
-    //
-    // 注意 r=0 是**正常结果**：这张图的卡片就是方角的（y=26 那一行 x=26 就已经是卡片了）。
-    // 之前这里写死 0.042 是拍脑袋定的，把卡片四个角各削掉了 29px ——
-    // 宁可方角也不要凭空削卡片，所以量到 0 就真的不削。
-    let cornerPx = 0, cornerSrc = 'square';
-    if (cornerOverride !== undefined) {
-      cornerPx = Math.round(dw * cornerOverride); cornerSrc = 'override';
-    } else if (detected) {
-      const xLo = Math.max(1, CARD.x0 - 4);
-      const xHi = CARD.x0 + Math.min(90, cw0 >> 2);
-      const firstEdgeX = (y) => {
-        for (let x = xLo; x < xHi; x++) {
-          if (Math.abs(luma((y * W + x) << 2) - luma((y * W + x - 1) << 2)) > 26) return x;
-        }
-        return -1;
-      };
-      let r = -1;
-      for (let dy = 0; dy < Math.min(90, ch0 >> 2); dy++) {
-        const e = firstEdgeX(CARD.y0 + dy);
-        if (e >= 0 && e <= CARD.x0 + 1) { r = dy; break; }
-      }
-      if (r >= 3) {
-        const rw = r / scale;
-        if (rw < dw * 0.15) { cornerPx = Math.round(rw); cornerSrc = 'measured'; }
-      }
-    }
+    // ---- 3. 圆角 ----
+    // 原图是方角的（自带黑边），这里按 CORNER_PX 削一个圆角，接近实体卡的倒角观感。
+    // 只改 alpha 通道、不动 RGB，所以圆角处不会渗出黑边或白边。
+    let cornerPx = defaultCornerPx, cornerSrc = 'flag';
+    if (cornerOverride !== undefined) { cornerPx = Math.round(dw * cornerOverride); cornerSrc = 'override'; }
+    cornerPx = Math.max(0, Math.min(Math.round(cornerPx), Math.floor(Math.min(dw, dh) / 2)));
 
     const rr = document.createElement('canvas'); rr.width = dw; rr.height = dh;
     const rctx = rr.getContext('2d');
@@ -208,7 +201,7 @@ for (const file of files) {
 
     const rectPx = (r) => ({ x0: r.x0 * dw, y0: r.y0 * dh, x1: r.x1 * dw, y1: r.y1 * dh });
     const R = {};
-    for (const k of Object.keys(regions)) R[k] = rectPx(regions[k]);
+    for (const k of Object.keys(mapped)) R[k] = rectPx(mapped[k]);
 
     // ---- 卡名笔画 ----
     // 卡名带的**底色就是卡框色**，而游戏王这一点花色极多，字色还跟着一起变：
@@ -388,13 +381,14 @@ for (const file of files) {
       texWidth: texW, texHeight: texH, contentW: dw, contentH: dh,
       cardW: cw0, cardH: ch0, aspect: aspect,
       contentUV: { x0: ox / texW, y0: oy / texH, x1: (ox + dw) / texW, y1: (oy + dh) / texH },
+      regionsMapped: mapped,
       dataUri: tex.toDataURL(FORMAT, QUALITY),
       maskUri: mtex.toDataURL('image/png'),
       maskPreview: pv.toDataURL('image/png'),
       inkStats: inkStats,
       coverage: { name: inkN / n, art: artN / n, text: textN / n, frame: frameN / n, ring: ringN / n, opaque: n / (dw * dh) }
     };
-  }, ['data:' + mime + ';base64,' + srcBytes.toString('base64'), MARGIN, CONTENT_H, FORMAT, QUALITY, regions, nameInk, override.cornerRadius, DETECT_SRC]);
+  }, ['data:' + mime + ';base64,' + srcBytes.toString('base64'), FORMAT, QUALITY, regions, nameInk, override.cornerRadius, CORNER_PX, DETECT_SRC]);
 
   writeFileSync(join(outDir, 'mask-preview.png'), Buffer.from(res.maskPreview.split(',')[1], 'base64'));
 
@@ -411,7 +405,7 @@ for (const file of files) {
       res.detectNote === 'both-axes' ? '（两对边都够强，直接用）' : '（有一对边对比度不够，用 59:86 的比例补出来的）');
   }
   console.log('   圆角       :', res.cornerPx + 'px', res.cornerSrc === 'measured' ? '（量的）' : '（默认值）');
-  console.log('   纹理       :', `${res.texWidth}×${res.texHeight}  内容 ${res.contentW}×${res.contentH}  留白 ${(MARGIN * 100).toFixed(0)}%`);
+  console.log('   纹理       :', `${res.texWidth}×${res.texHeight}  = 整张原图（不裁不缩不留白）  圆角 ${res.cornerPx}px`);
   console.log('   掩膜覆盖   : 卡名', (res.coverage.name * 100).toFixed(2) + '%',
     '· 卡图', (res.coverage.art * 100).toFixed(1) + '%',
     '· 效果框', (res.coverage.text * 100).toFixed(1) + '%',
@@ -440,7 +434,7 @@ for (const file of files) {
     contentUV: res.contentUV,
     contentWidth: res.contentW, contentHeight: res.contentH,
     contentAspect: res.aspect,
-    regions, nameInk,
+    regions: res.regionsMapped, nameInk,
     nameInkStats: res.inkStats,
     maskCoverage: res.coverage,
     dataUri: res.dataUri, maskUri: res.maskUri
@@ -463,7 +457,7 @@ const body = built.map((b) => `  {
     cardDetected: ${b.cardDetected},
     cornerRadius: ${b.cornerPx},
     cornerRadiusSource: ${JSON.stringify(b.cornerSource)},
-    // 纹理 = 卡片内容 + 四周 ${(MARGIN * 100).toFixed(0)}% 透明留白
+    // 纹理 = 整张原图（不裁不缩不留白），只削了圆角 alpha
     width: ${b.width},
     height: ${b.height},
     aspect: ${b.aspect.toFixed(6)},
@@ -494,7 +488,7 @@ const header = `/*
  * 每条包含：
  *   ① card / mask —— 卡图本体与**工艺区域掩膜**（都是 data URI，同尺寸）
  *      · 卡片外沿是**自动识别**的（找整行/整列一起跳变的硬边），识别不出来就退化成整张图
- *      · 卡图缩放到内容高 ${CONTENT_H}px、四周补 ${(MARGIN * 100).toFixed(0)}% 透明留白、削圆角
+ *      · 卡面 = **整张原图**（不裁不缩不留白），只按 --corner 削一个圆角 alpha
  *   ② mask 的通道：
  *        R = 卡名笔画（Otsu 自动分割 + 自动判极性，再膨胀 ${NAME_INK.dilate}px）
  *        G = 卡图内容区（插画本身，不含四周深色框）

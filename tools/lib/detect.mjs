@@ -42,6 +42,15 @@ function detectCardRect(sp, W, H) {
     colEdge[x] = n / (yb - ya);
     if (colEdge[x] > maxCol) maxCol = colEdge[x];
   }
+  // 边缘门槛：保持原来的自适应口径 max(0.5, max*0.75)。
+  //
+  // 试过放宽到 max(0.32, max*0.5)（想直接够到弱边），**不行**：
+  // 深背景 + 投影的合成用例里，投影的软边强度正好落在 0.5~0.75 之间，
+  // 门槛一低就捡投影不捡卡片（实测误差 2px → 19px）。
+  // 试过"先严后宽扫两遍"，**也不行**：严档扫出来的东西长宽比看着像卡（其实不对），
+  // 于是永远不会去试宽档 —— 反倒把这个用例彻底扫崩（退化成整图，误差 396px）。
+  //
+  // 弱边改由下面的**对称镜像**去救，比动门槛精确得多，也不影响任何合成用例。
   var rowTh = Math.max(0.5, maxRow * 0.75);
   var colTh = Math.max(0.5, maxCol * 0.75);
   var top = -1, bot = -1, left = -1, right = -1;
@@ -57,20 +66,50 @@ function detectCardRect(sp, W, H) {
     var ar = w / h;
     var area = (w * h) / (W * H);
     if (Math.abs(ar - CARD_ASPECT) > 0.03) {
-      // 比例不对 → 有一对边没找准。信"边缘更强"的那一对，用比例推出另一对。
-      var vStrength = Math.min(colEdge[left], colEdge[right]);
-      var hStrength = Math.min(rowEdge[top], rowEdge[bot]);
-      if (vStrength >= hStrength) {
-        var newH = Math.round(w / CARD_ASPECT);
-        // 锚在更强的那一条横边上：上沿更可信就往下展开，下沿更可信就往上收
-        if (rowEdge[top] >= rowEdge[bot]) bot = top + newH - 1;
-        else top = bot - newH + 1;
-        note = 'width-led';
+      // 比例不像卡 → 至少有一对边没找准。
+      //
+      // 先试"留白对称补边"：卡图基本都是从同一个模板**居中**导出的，被内部边抢走的那一侧
+      // 可以用对边镜像补回来。这一步专门救**超量黑框**那种卡沿与背景几乎同色、边缘强度为
+      // 0 的图 —— 任何门槛都找不到它的下沿，只能靠镜像
+      //（Raidraptor 实测：下沿捡到 1124，镜像后 1158，正是卡片真正的下沿）。
+      //
+      // 判据：只认 ① 镜像后长宽比真的像卡（|Δ| ≤ 0.03）② 比原来更接近 的候选；
+      // 都满足时取**面积最大**的那个 —— 失效方向是"多包一点背景"，而不是把卡片裁掉。
+      //
+      // 注意**不能**拿"最接近 59:86"当判据：这套图的实拍比例是 0.6726 而不是 0.686，
+      // 按 0.686 挑反而会选中矮了 10px 的那个。
+      var best = null;
+      for (var mv = 0; mv < 2; mv++) {
+        for (var mh = 0; mh < 2; mh++) {
+          var t2 = top, b2 = bot, l2 = left, r2 = right;
+          if (mv) { if (rowEdge[top] >= rowEdge[bot]) b2 = H - 1 - top; else t2 = H - 1 - bot; }
+          if (mh) { if (colEdge[left] >= colEdge[right]) r2 = W - 1 - left; else l2 = W - 1 - right; }
+          var cw2 = r2 + 1 - l2, ch2 = b2 + 1 - t2;
+          if (cw2 <= 0 || ch2 <= 0) continue;
+          var d2 = Math.abs(cw2 / ch2 - CARD_ASPECT);
+          if (d2 > 0.03 || d2 >= Math.abs(ar - CARD_ASPECT)) continue;
+          if (!best || cw2 * ch2 > best.area) best = { area: cw2 * ch2, t: t2, b: b2, l: l2, r: r2, mv: mv, mh: mh };
+        }
+      }
+      if (best) {
+        top = best.t; bot = best.b; left = best.l; right = best.r;
+        note = best.mv && best.mh ? 'mirror-both' : (best.mv ? 'mirror-v' : 'mirror-h');
       } else {
-        var newW = Math.round(h * CARD_ASPECT);
-        if (colEdge[left] >= colEdge[right]) right = left + newW - 1;
-        else left = right - newW + 1;
-        note = 'height-led';
+        // 镜像也救不回来 → 退回原来那套：信"边缘更强"的那一对，用 59:86 推出另一对。
+        var vStrength = Math.min(colEdge[left], colEdge[right]);
+        var hStrength = Math.min(rowEdge[top], rowEdge[bot]);
+        if (vStrength >= hStrength) {
+          var newH = Math.round(w / CARD_ASPECT);
+          // 锚在更强的那一条横边上：上沿更可信就往下展开，下沿更可信就往上收
+          if (rowEdge[top] >= rowEdge[bot]) bot = top + newH - 1;
+          else top = bot - newH + 1;
+          note = 'width-led';
+        } else {
+          var newW = Math.round(h * CARD_ASPECT);
+          if (colEdge[left] >= colEdge[right]) right = left + newW - 1;
+          else left = right - newW + 1;
+          note = 'height-led';
+        }
       }
       w = right + 1 - left; h = bot + 1 - top;
       ar = w / h;

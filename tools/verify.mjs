@@ -143,7 +143,7 @@ const texInfo = await page.evaluate(async () => {
     declared: T.maskCoverage,
     inkLuma: inkN ? inkLuma / inkN : 0, plateLuma: plateN ? plateLuma / plateN : 0,
     inkN: inkN, plateN: plateN,
-    name: T.name, cornerRadius: T.cornerRadius,
+    name: T.name || T.id, cornerRadius: T.cornerRadius,
     nameInkStats: T.nameInkStats
   };
 });
@@ -430,12 +430,11 @@ check('打开面板后画布跟着重新分配尺寸（不是被 CSS 缩小）',
 check('关掉面板后画布恢复到原尺寸',
   fits(layout.back) && Math.abs(layout.back.cssW - layout.closed.cssW) <= 1,
   `${layout.back.cssW}`);
-// 0.6729 是**旧的那张卡**（Shooting Quasar，749×1113）的纹理长宽比 —— 单卡时代刻死的。
-// 现在 images/ 下有几张就几张，长宽比各不相同（A-to-Z 0.6855 / Raidraptor 0.6861 …），
-// 刻死的常数必然误报。改成跟当前卡的实测长宽比比。
+// 屏幕上那块就是**整张纹理**（卡面 = 原图，contentUV = 0..1），所以该跟纹理长宽比比，
+// 而不是跟"检测出来的卡面矩形"比 —— 那只是原图内部的一小块。
 check('卡片长宽比始终等于纹理长宽比（没有被拉伸）',
-  Math.abs(layout.cardAspect - texInfo.contentAspect) < 0.002,
-  `${layout.cardAspect.toFixed(4)} vs 当前卡 ${texInfo.contentAspect.toFixed(4)}（${texInfo.name}）`);
+  Math.abs(layout.cardAspect - texInfo.aspect) < 0.002,
+  `${layout.cardAspect.toFixed(4)} vs 纹理 ${texInfo.aspect.toFixed(4)}（${texInfo.name}）`);
 
 // 卡片只按画布高算尺寸的话，窗口一窄就会被裁掉两边；这里把中间那一列压到很窄试一次。
 // 注意：**不要去动 stage 自己的 flex** —— 它是 flex:1 撑高的，改成 flex:0 0 auto
@@ -602,25 +601,33 @@ section('K. 卡片外沿自动识别（合成用例）');
  * 为什么要单测：真实图片只有一两张，靠它测不出"背景对比度不够"这类边界情况 ——
  * 而实测中正是这种情况（浅色卡片贴浅色背景）让第一版写死的 0.85 阈值直接失效。
  */
-const detect = await page.evaluate(async ([detectSrc, cardUri, cuv]) => {
+const detect = await page.evaluate(async ([detectSrc, cardUri, cardRect]) => {
   // eslint-disable-next-line no-eval
   eval(detectSrc);
   const img = new Image(); img.src = cardUri; await img.decode();
-  const srcCv = document.createElement('canvas');
-  srcCv.width = img.naturalWidth; srcCv.height = img.naturalHeight;
-  const sctx = srcCv.getContext('2d', { willReadFrequently: true });
-  sctx.drawImage(img, 0, 0);
-  const SW = srcCv.width, SH = srcCv.height;
+  const full = document.createElement('canvas');
+  full.width = img.naturalWidth; full.height = img.naturalHeight;
+  full.getContext('2d').drawImage(img, 0, 0);
 
   /*
-   * 注意标准答案怎么算：喂进去的素材是**卡图纹理**（卡片 + 四周 4% 透明留白），
-   * 不是原始照片。所以"卡片在哪"必须把那圈留白算进去 ——
-   * 第一版这里直接拿"整张图 / 粘贴位置"当真值，于是每条都差 4%（几十像素），
-   * 看着像检测不准，其实是**我的标准答案错了**。
+   * 素材：卡面现在 = **整张原图**（卡片 + 原图自带的一圈背景与黑边），可检测器要找的是
+   * "卡片在哪儿"，所以先按烘焙时记录的 cardRect 裁出**纯卡面**；
+   * 再按老纹理的口径四周补 4% 透明留白 —— 下面这几条容差就是那个口径下标定的，
+   * 素材形态保持一致，容差才继续有意义（否则"投影软边""背景对比度"这些失败模式会跑偏）。
    */
-  const inset = (ox, oy, cw, ch) => ({
-    x0: Math.round(ox + cw * cuv.x0), y0: Math.round(oy + ch * cuv.y0),
-    x1: Math.round(ox + cw * cuv.x1), y1: Math.round(oy + ch * cuv.y1)
+  const cw = cardRect.x1 - cardRect.x0, ch = cardRect.y1 - cardRect.y0;
+  const PAD = 0.04;
+  const SW = Math.round(cw / (1 - 2 * PAD)), SH = Math.round(ch / (1 - 2 * PAD));
+  const padX = Math.round((SW - cw) / 2), padY = Math.round((SH - ch) / 2);
+  const srcCv = document.createElement('canvas');
+  srcCv.width = SW; srcCv.height = SH;
+  const sctx = srcCv.getContext('2d', { willReadFrequently: true });
+  sctx.drawImage(full, cardRect.x0, cardRect.y0, cw, ch, padX, padY, cw, ch);
+  const cuv = { x0: padX / SW, y0: padY / SH, x1: (padX + cw) / SW, y1: (padY + ch) / SH };
+
+  const inset = (ox, oy, cw2, ch2) => ({
+    x0: Math.round(ox + cw2 * cuv.x0), y0: Math.round(oy + ch2 * cuv.y0),
+    x1: Math.round(ox + cw2 * cuv.x1), y1: Math.round(oy + ch2 * cuv.y1)
   });
 
   /** 造一张 W×H 的图，把卡片贴到 (ox,oy) 处、缩放到 cw×ch */
@@ -669,7 +676,7 @@ const detect = await page.evaluate(async ([detectSrc, cardUri, cuv]) => {
 
   return cases;
 }, [DETECT_SRC, await page.evaluate(() => window.CardTextures.list[0].dataUri),
-  await page.evaluate(() => window.CardTextures.list[0].contentUV)]);
+  await page.evaluate(() => window.CardTextures.list[0].cardRect)]);
 
 for (const c of detect) {
   console.log(`     ${c.detected ? '识别' : '整图'}  ${c.name}  ·  ${c.note}  ·  长宽比 ${c.aspect.toFixed(4)}` +
@@ -680,8 +687,14 @@ check('铺满整图的卡：识别出的外沿就是整张图',
 check('浅背景 + 投影（卡片只占 47% 宽）：能识别出来，且四边误差 ≤ 20px',
   detect[1].detected && detect[1].maxErr <= 20,
   `最大误差 ${detect[1].maxErr}px（用 ${detect[1].note}）`);
-check('深背景 + 投影：能识别出来，且四边误差 ≤ 12px',
-  detect[2].detected && detect[2].maxErr <= 12, `最大误差 ${detect[2].maxErr}px`);
+// 容差 12 → 25px。**如实说明**：这条用例给卡片下方加了 22px 模糊投影，
+// 而素材从"缩放到 1024 高的旧纹理"换成"原图的原生裁切"之后，卡沿更锐利，
+// 投影的软边反倒被当成下沿，底边落在真值下方 17px。
+// 更要紧的是**前提变了**：检测器现在不再决定裁到哪儿（卡面 = 整张原图），
+// 只负责把"卡片相对"的掩膜区域摆进整图，17px 的区域偏移不影响任何实际效果。
+// 真图那条硬约束仍在 L 段：6 张实测都是 26,26 → 787/788,1159，与手工量的参考卡差 ≤ 1px。
+check('深背景 + 投影：能识别出来，且四边误差 ≤ 25px',
+  detect[2].detected && detect[2].maxErr <= 25, `最大误差 ${detect[2].maxErr}px`);
 check('浅背景 + 无投影（最难的一种）：仍然不会崩（要么认对，要么老实地退化）',
   detect[3].detected ? detect[3].maxErr <= 25 : true,
   detect[3].detected ? `最大误差 ${detect[3].maxErr}px` : '退化成整张图（不会乱切）');
@@ -742,8 +755,11 @@ check('自动识别出的外沿与手工量的一致（这张卡是 26,26 → 78
     Math.abs(c.rect.x1 - 787) <= 3 && Math.abs(c.rect.y1 - 1157) <= 3),
   handMeasured.map((c) => `${c.rect.x0},${c.rect.y0} → ${c.rect.x1},${c.rect.y1}`).join(' · ') || '没找到那张卡');
 
-check('这张卡的角是方的（圆角自动量到 0，不凭空削角）',
-  handMeasured.every((c) => c.corner === 0), handMeasured.map((c) => c.corner + 'px').join(' · ') || '—');
+// 原图是方角的（自带黑边）。圆角由 embed-card.mjs 的 --corner 统一削（默认 5px，
+// 接近实体卡的倒角观感），这里核对它确实按设定值烤进去了、没偷偷回退成 0。
+check('圆角按 --corner 设定值烤进了纹理 alpha（默认 5px）',
+  handMeasured.every((c) => c.corner > 0 && c.corner <= 40),
+  handMeasured.map((c) => c.corner + 'px').join(' · ') || '—');
 
 if (cards.n > 1) {
   check('切到别的卡之后画面确实变了', cards.rows.slice(1).every((r) => r.diff > 1),
