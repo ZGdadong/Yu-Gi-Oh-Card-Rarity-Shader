@@ -30,12 +30,17 @@
     { key: 'autoSway', group: '观看', label: '自动摆动', type: 'range', min: 0, max: 1, step: 0.01, def: 0.35, hint: '鼠标离开时卡片自己慢慢摇，闪膜一直在动，不用手也有得看' },
     { key: 'swaySpeed', group: '观看', label: '摆动速度', type: 'range', min: 0, max: 2, step: 0.01, def: 0.5 },
     { key: 'speed', group: '观看', label: '时间倍率', type: 'range', min: 0, max: 3, step: 0.01, def: 1, hint: '闪膜流动/闪粉跳动的速度' },
-    { key: 'cornerPx', group: '观看', label: '卡片圆角 (px)', type: 'range', min: 0, max: 60, step: 0.5, def: 5, hint: '卡片四角的圆角半径，单位是**原图像素**（原图 813×1185）。0 = 方角。这是运行时遮罩，拖一下立刻变，不用重烤' },
+    { key: 'cornerPx', group: '观看', label: '卡片圆角 (px)', type: 'range', min: 0, max: 60, step: 0.5, def: 30, hint: '卡片四角的圆角半径，单位是**原图像素**（原图 813×1185）。0 = 方角。这是运行时遮罩，拖一下立刻变，不用重烤' },
     { key: 'cardSize', group: '观看', label: '卡片大小', type: 'range', min: 0.35, max: 1.05, step: 0.01, def: 0.78, hint: '画面上卡片的高度占画布的比例。实际会被自动夹住 —— 保证整张卡都在画面里，不会被裁边' },
     { key: 'scale', group: '观看', label: '渲染分辨率', type: 'range', min: 0.4, max: 1, step: 0.05, def: 1, hint: '内部渲染倍率，掉帧就调低' },
     { key: 'shadowOn', group: '观看', label: '投影', type: 'check', def: 1 },
     { key: 'bgOn', group: '观看', label: '背景', type: 'check', def: 1 },
     { key: 'bgSpin', group: '观看', label: '背景流光', type: 'range', min: 0, max: 1, step: 0.01, def: 0.35 },
+    // 这两根是冲着"卡片下方看起来多了一条黑边"去的 —— 那其实是**背景**：
+    // 底色 ×0.55 的暗端 + 暗角两重压暗叠在画面下方，实测只剩 13/255（约 5%），
+    // 跟卡片自带的深色边框糊成一片，把卡片圆角切掉也不会变（黑的是背景，不是卡片）。
+    { key: 'bgBright', group: '观看', label: '背景亮度', type: 'range', min: 0.2, max: 4, step: 0.01, def: 1, hint: '背景整体明暗。**卡片下方那圈看着像黑边的背景，调大这根就能把它提起来**（现在只有 13/255）' },
+    { key: 'bgVignette', group: '观看', label: '背景暗角', type: 'range', min: 0, max: 1, step: 0.01, def: 0.55, hint: '画面四周压暗的强度。0 = 完全不压暗，卡片边缘和背景的分界最清楚' },
 
     // ---- ② 工艺 ----
     { key: 'mName', group: '工艺', label: '卡名工艺', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: '银字 / 金名 / 红名 / 白碎名 的强度' },
