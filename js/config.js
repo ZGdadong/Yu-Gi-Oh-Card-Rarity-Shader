@@ -20,7 +20,7 @@
   // 参数表。type: range / check / color / select
   const SPEC = [
     // ---- ① 观看 ----
-    { key: 'card', group: '观看', label: '卡图', type: 'card', def: 0, hint: 'images/ 下有几张就列出几张（换图之后重跑 node tools/embed-card.mjs 即可）' },
+    { key: 'card', group: '观看', label: '卡图', type: 'card', def: 0, hint: 'images/ 下**烤过**几张就列几张。新丢一张图进 images/ 之后，点这一行右边的 ⟳ 就能当场烤出来（http 下自动扫目录；file:// 下浏览器不给读目录，会弹文件框让你选）—— 要长期留下还是得跑 node tools/embed-card.mjs' },
     { key: 'rarity', group: '观看', label: '罕贵度', type: 'select', def: 2, hint: '选一个罕贵度，卡面按 js/rarities.js 里那份配方重新叠一遍' },
     { key: 'intensity', group: '观看', label: '工艺总强度', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: '所有工艺层的强度一起缩放。0 = 完全回到原始印刷' },
     { key: 'viewGain', group: '观看', label: '视角灵敏度', type: 'range', min: 0, max: 3, step: 0.01, def: 1, hint: '倾斜驱动闪膜衍射相位的力度' },

@@ -258,6 +258,9 @@ html, body {
 }
 .prow { margin-bottom: 11px; }
 .prow-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+/* 「卡图」行右边的 刷新按钮 + 下拉框：按钮紧贴下拉框左边，两个一起靠右 */
+.prow-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.prow-right select { min-width: 0; }
 .plabel { font-size: 12px; color: #b9c6dd; }
 .pval { font-size: 11px; color: #7d90b4; font-family: ui-monospace, Consolas, monospace; }
 /* 读数框：可键入精确值（滑条 1 像素跨几十步，光靠拖打不准 0.1800 这种值）。

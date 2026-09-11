@@ -50,6 +50,16 @@
 
   let pipeline = null;
 
+  /** 解码一张 data URI / URL 成 <img>（卡面与掩膜都是这么进来的） */
+  function decodeImage(uri) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => rej(new Error('纹理解码失败'));
+      img.src = uri;
+    });
+  }
+
   // ------------------------------------------------------------------ 启动 ----
 
   function boot() {
@@ -68,12 +78,7 @@
 
       // ---- 解码纹理：每张卡的卡面 + 掩膜，加一张图案图集（全是 data URI，file:// 下干净）----
       const stamps = global.CardStamps.build();
-      const load = (uri) => new Promise((res, rej) => {
-        const img = new Image();
-        img.onload = () => res(img);
-        img.onerror = () => rej(new Error('纹理解码失败'));
-        img.src = uri;
-      });
+      const load = decodeImage;
 
       const jobs = CARDS.list.map((c) => Promise.all([load(c.dataUri), load(c.maskUri)])
         .then(([card, mask]) => ({ id: c.id, card: card, mask: mask })));
@@ -266,6 +271,98 @@
     sel.value = hit;
   }
 
+  // ------------------------------------------------------- 卡图刷新（⟳）----
+
+  /**
+   * 填「卡图」下拉框的选项。
+   *
+   * 单独抽出来是因为它会**被填两次**：建面板时一次，运行时加完新卡再一次
+   *（见 refreshCards）—— 以前这段写死在 paramRow 里，加完新卡就没法重建了。
+   */
+  function fillCardOptions(sel) {
+    sel.innerHTML = '';
+    CARDS.list.forEach((c, i) => {
+      const o = el('option', null, I18N.has('card.' + c.id + '.name') ? t('card.' + c.id + '.name') : c.id);
+      o.value = String(i);
+      sel.appendChild(o);
+    });
+  }
+
+  /** 刷新结果 → 一句状态栏文案 */
+  function cardRefreshMsg(r) {
+    if (r.added.length) {
+      return tOr('status.cardAdded', '已加入 {n} 张：{names}', { n: r.added.length, names: r.added.join(' · ') });
+    }
+    if (r.failed && r.failed.length) {
+      return tOr('status.cardFail', '烘焙失败：{names}', { names: r.failed.map((f) => f.id + '（' + f.msg + '）').join(' · ') });
+    }
+    if (r.reason === 'nothing-new') return tOr('status.cardNoNew', 'images/ 下 {n} 张都已经烤过了，没有新图', { n: r.scanned });
+    if (r.reason === 'all-known') return tOr('status.cardAllKnown', '选的这几张都已经在列表里了，没有新增');
+    if (r.reason === 'cancelled') return tOr('status.cardCancelled', '没有选文件，卡图没变');
+    if (r.reason === 'scan-unsupported') {
+      return tOr('status.cardScanUnsupported', 'file:// 下浏览器不让读目录，请手动选 images/ 里那张新图');
+    }
+    return '';
+  }
+
+  /**
+   * 「卡图」左边那个 ⟳：把 images/ 里**还没烤过**的图加进下拉框。
+   *
+   * 两条路（细节见 js/card-refresh.js 的注释）：
+   *   http://  → 自动扫目录，发现新图就当场烤
+   *   file://  → 列不了目录，改成弹文件框手动选（FileReader 读成 data URI 才不脏 canvas）
+   *
+   * 烤完还要做三件事，缺一张卡都出不来：
+   *   ① 把新卡的卡面/掩膜**解码**出来 —— 管线只认解码好的 <img>
+   *   ② 重新 attachImages —— 它会重建 cardImgs / maskImgs 两张表并重传 GL 纹理
+   *   ③ 重建下拉框并切到新卡（否则选项里没有它，也没人会去选）
+   */
+  async function refreshCards(p, manualPick) {
+    const status = $('status');
+    if (!global.CardRefresh) {
+      status.textContent = tOr('status.cardRefreshGone', '刷新卡图不可用：js/card-refresh.js 没加载');
+      return;
+    }
+    status.textContent = tOr('status.cardScanning', '正在扫描 images/ …');
+
+    let r;
+    try {
+      r = await global.CardRefresh.refresh({ pick: !!manualPick });
+    } catch (e) {
+      status.textContent = tOr('status.cardFail', '烘焙失败：{names}', { names: e.message });
+      console.error(e);
+      return;
+    }
+
+    if (r.added.length) {
+      try {
+        const byId = {};
+        for (const id of CARDS.order) {
+          if (p.cardImgs[id] && p.maskImgs[id]) byId[id] = { card: p.cardImgs[id], mask: p.maskImgs[id] };
+        }
+        for (const id of r.added) {
+          const e = CARDS.byId[id];
+          byId[id] = { card: await decodeImage(e.dataUri), mask: await decodeImage(e.maskUri) };
+        }
+        p.attachImages(byId, p.stampImage);
+        // 注：index.html 里 bake 的圆角是 0，运行时的圆角由 uCardRound 现算，
+        // 所以这里不用管圆角 —— 参数面板「卡片圆角 (px)」照旧生效。
+        const sel = document.querySelector('#panel select[data-key="card"]');
+        if (sel) { fillCardOptions(sel); sel.value = String(p.getParams().card); }
+        // 切到新加的第一张（setParam 会触发 syncPanel/写 hash，所以状态栏放最后写）
+        p.setParam('card', CARDS.order.indexOf(r.added[0]));
+        if (sel) sel.value = String(p.getParams().card);
+      } catch (e) {
+        status.textContent = tOr('status.cardFail', '烘焙失败：{names}', { names: e.message });
+        console.error(e);
+        return;
+      }
+    }
+    // 注意顺序：上面 setParam 会触发 onParamsChanged → syncPanel 把状态栏写成 pass 计数，
+    // 所以这句必须放在所有 setParam 之后。
+    status.textContent = cardRefreshMsg(r);
+  }
+
   // ------------------------------------------------------------------ 面板 ----
 
   function buildPanel(p) {
@@ -309,19 +406,28 @@
       top.appendChild(inp);
       row.appendChild(top);
     } else if (sp.type === 'card') {
-      // 卡图选择：images/ 下有几张就列几张
+      // 卡图选择：images/ 下**烤过**的几张就列几张
       const top = el('div', 'prow-top');
       top.appendChild(el('span', 'plabel', label));
+      // 刷新按钮贴着下拉框的左边。为什么需要它：这个下拉框列的是
+      // js/card-textures.js（由 tools/embed-card.mjs 扫描 images/ 生成），
+      // 页面从不读 images/ 目录 —— 新丢一张图进去，不点它就不会出现。
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'btn-card-refresh';
+      btn.className = 'tb-btn tb-btn-sm';
+      btn.textContent = '⟳';
+      btn.title = tOr('panel.cardRefresh', '重新扫描 images/，把新加的卡图烤出来（file:// 下会弹文件选择框；按住 Shift 点则强制手动选）');
+      btn.addEventListener('click', (e) => refreshCards(p, e.shiftKey));
+      const right = el('div', 'prow-right');
+      right.appendChild(btn);
       const sel = document.createElement('select');
       sel.dataset.key = sp.key;
       sel.style.cssText = SEL_CSS;
-      CARDS.list.forEach((c, i) => {
-        const o = el('option', null, I18N.has('card.' + c.id + '.name') ? t('card.' + c.id + '.name') : c.id);
-        o.value = String(i);
-        sel.appendChild(o);
-      });
+      fillCardOptions(sel);
       sel.addEventListener('change', () => p.setParam(sp.key, Number(sel.value)));
-      top.appendChild(sel);
+      right.appendChild(sel);
+      top.appendChild(right);
       row.appendChild(top);
     } else if (sp.type === 'select') {
       const top = el('div', 'prow-top');

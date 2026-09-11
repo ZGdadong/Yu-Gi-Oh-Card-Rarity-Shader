@@ -11,6 +11,7 @@
 写"卡名部分为银色烫金"就只给卡名笔画烫银。
 
 **卡图可以换** —— `images/` 下有几张就认几张，参数面板最上面那个「卡图」下拉框里选。
+新丢一张图进去**不用跑 node**：点下拉框左边的 **⟳** 就能当场烤出来（详见下面「加一张新卡图」）。
 **界面有中文 / English / 日本語**，右上角切。
 
 | 想看的 | 去哪儿 |
@@ -54,7 +55,30 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | 「🔗 复制链接」 | 把当前 39 个参数写进地址栏 hash 并复制 |
 | 右上角「语言」 | 中文 / English / 日本語 即时切换，选择记在 localStorage 里；「⟳」重新扫描 `Languages/` 下新丢进来的语言包 |
 | 说明条右上「▾」 | 收起 / 展开说明条（收起状态也会记住） |
-| 面板最上面「卡图」 | 换 `images/` 下的另一张卡（有几张列几张） |
+| 面板最上面「卡图」 | 换一张已经烤好的卡（有几张列几张） |
+| 「卡图」下拉框左边的 **⟳** | **加一张新卡图**：扫 `images/` 找出还没烤过的图，当场烤出来加进下拉框。`file://` 下浏览器不给读目录，会弹文件选择框让你手动选（<kbd>Shift</kbd> + 点击 = 强制手动选） |
+
+---
+
+## 加一张新卡图
+
+把图片丢进 `images/`（文件名就是卡 id），然后二选一：
+
+| | 怎么做 | 结果 |
+| --- | --- | --- |
+| **临时看一张** | 打开页面，点「卡图」下拉框左边的 **⟳** | 浏览器里**当场烤**出来，立刻能选。只活在这一份内存里，**刷新页面就没了** |
+| **长期留下** | `node tools/embed-card.mjs` | 重新生成 `js/card-textures.js`（7 张卡约 4 分钟），并发到 `assets/` 归档；之后每次打开都在 |
+
+**为什么 ⟳ 不是"重新读一遍目录"那么简单**：下拉框列的是 `js/card-textures.js`，而卡图不是直接读 `images/` 的
+—— 每张卡还需要一张**工艺区域掩膜**（卡名笔画靠 Otsu 从图里抠、插画与效果框的矩形要按卡片外沿映射），
+这些是烘焙时算出来的。所以 ⟳ 必须**把烘焙跑一遍**，它调的就是 `js/bake.js` —— 与 `embed-card.mjs` 同一份实现。
+
+两条路的差别只在"怎么知道有新图"：
+
+- `http://`（`python -m http.server`）→ `fetch('images/')` 读目录索引，自动发现新图，全自动
+- `file://`（双击打开）→ 浏览器**不允许**列目录，而且 file:// 的图会让 canvas 变"脏"、`getImageData` 直接抛
+  `SecurityError`（整个项目就是为了绕开这条才把卡图内嵌成 data URI 的）。所以改成弹文件选择框，
+  用 `FileReader` 读成 data URI 再烤 —— 用户主动选的文件不带来源限制
 
 ---
 
@@ -316,11 +340,14 @@ Yu-Gi-Oh Card Rarity/
 │   └── 语言代码说明.txt
 ├── js/
 │   ├── card-textures.js         **自动生成**：每张卡的卡图 + 掩膜（data URI）+ 区域表 + SHA-256
+│   ├── detect.js                卡片外沿检测（页面与 tools/ 共用同一份）
+│   ├── bake.js                  烘焙核心：纹理 + 工艺区域掩膜（页面与 tools/ 共用同一份）
+│   ├── card-refresh.js          「卡图」左边那个 ⟳：扫 images/ 或选文件，当场烤出新卡
 │   ├── i18n.js                  多语言加载器：t / tOr、localStorage、缺键回退 zh-CN
 │   ├── stamps.js                图案图集：运行时用 canvas 2D 画 KC / 20th / 25th / 象形字
 │   ├── shaders.js               17 个工艺 + 4 个基础件 + 3D 倾斜顶点着色器
 │   ├── rarities.js              43 条罕贵度 → 着色器配方
-│   ├── config.js                39 个参数 + 22 个预设 + hash 编解码
+│   ├── config.js                53 个参数 + 22 个预设 + hash 编解码
 │   ├── pipeline.js              多 pass 管线、3D 倾斜、一览模式、取像接口
 │   └── ui.js                    罕贵度列表 / 说明条 / 参数面板 / 语言下拉 / hash 同步
 ├── docs/
@@ -331,7 +358,9 @@ Yu-Gi-Oh Card Rarity/
 ├── tools/
 │   ├── analyze-card.mjs         逐行/逐列边缘强度剖面
 │   ├── probe-card.mjs           定点亮度剖面 + 放大裁片（量边界用）
-│   ├── embed-card.mjs           卡图 + 掩膜烘焙
+│   ├── embed-card.mjs           卡图 + 掩膜烘焙（调 js/detect.js + js/bake.js，与页面同源）
+│   ├── lib/detect.mjs           → js/detect.js 的源码文本
+│   ├── lib/bake.mjs             → js/bake.js 的源码文本
 │   ├── gen-doc.mjs              重填文档里自动生成的表
 │   ├── doc-check.mjs            核对文档里可机器判定的说法
 │   ├── verify.mjs               33 项自检

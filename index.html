@@ -78,6 +78,12 @@
 
 <!-- 经典 script，按依赖顺序；file:// 双击即可运行（卡图是 data URI 内嵌的）-->
 <script src="js/card-textures.js"></script>
+<!-- 烘焙核心：detect.js（卡片外沿）+ bake.js（纹理与掩膜）。
+     参数面板「卡图」左边那个 ⟳ 就是用它**在浏览器里当场烤**，
+     所以新丢进 images/ 的图不跑 node 也能加进来。tools/embed-card.mjs 共用同一份。 -->
+<script src="js/detect.js"></script>
+<script src="js/bake.js"></script>
+<script src="js/card-refresh.js"></script>
 <script src="js/stamps.js"></script>
 <script src="js/shaders.js"></script>
 <script src="js/rarities.js"></script>
