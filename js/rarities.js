@@ -139,7 +139,11 @@
   //   可见半径 0.31：以**鼠标**为圆心的软斑，窗口面积 π×0.31² ÷ 0.6729 ≈ 45% 卡面；
   //   对焦那一圈最亮、往外一路渐变（实测"看得出明显变化"的约占 34%
   //   —— 渐变的边上那圈本来就淡，见 PRELUDE 的 cursorGate）
-  //   配色：**按到光标的距离**分四档 蓝 → 黄 → 橙 → 红（见 shaders.js 的 boardPalette）
+  //   配色：**按到光标的距离**连续渐变 蓝 → 绿 → 黄 → 橙 → 红（见 shaders.js 的 boardPalette）
+  //   强度 0.95 → **0.475**：uP0.x 在这个着色器里**只**进最后那行
+  //     `tex.a * cover(region, uP0.x) * gate`
+  //   （就是这一层的 alpha），所以对半砍 = 电路板的浓度变成原来的一半，
+  //   其余参数一律不动。用户的原话是"纹路太明显了，透明度弄成现在的 50%"。
   const kc = (str) => L('kc',
     [str, 0.028, 0.105, 0.31], [1.35, 1.0, 0.12, SEL.ALL], [0.32, 0, 0, 0], C.white);
 
@@ -366,7 +370,7 @@
         '电路铺满整卡，但**只有鼠标附近那一块显形**：窗口是以光标' +
         '为圆心、半径 0.31 卡高的软斑（面积 ≈ 卡面 45%），**对焦那一圈最亮、往外一路渐变到边缘**。' +
         'NKC/RKC/UKC 是同一层膜套在不同基底上（这里用金闪基底代表）。',
-      layers: [artHolo(1.0, SEL.ART), gloss(0.14, SEL.ART), name(C.gold, 1.0, 1.0, 0), kc(0.95)]
+      layers: [artHolo(1.0, SEL.ART), gloss(0.14, SEL.ART), name(C.gold, 1.0, 1.0, 0), kc(0.475)]
     },
     {
       id: 'MILLENNIUM', code: 'Millennium Rare', cn: '千年闪', en: 'Millennium Rare', tier: 'parallel',
