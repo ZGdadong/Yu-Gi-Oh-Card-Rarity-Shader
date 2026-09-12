@@ -15,7 +15,8 @@
  * ── 遮罩选择码（见 js/shaders.js 的 pickMask）──────────────────────────
  *   0 全卡面  1 卡图  2 卡框  3 卡名  4 效果框  5 卡图+卡框
  *   6 金属区（卡框+卡名+卡图外环）  7 卡框+卡图外环  8 效果框里的字
- *   9 卡框+卡名  10 卡图+卡名  11 星数 / 阶数带  12 属性圆（名字后面那个圆）
+ *   9 卡框+卡名  10 卡图+卡名
+ *   11 星数 / 阶数带  12 属性圆（名字后面那个圆）  13 星带 + 属性圆（两块一起）
  */
 
 (function (global) {
@@ -24,7 +25,7 @@
   const SEL = {
     ALL: 0, ART: 1, FRAME: 2, NAME: 3, TEXT: 4, ART_FRAME: 5,
     METAL: 6, FRAME_RING: 7, TEXT_INK: 8, FRAME_NAME: 9, ART_NAME: 10,
-    STAR: 11, ATTR: 12
+    STAR: 11, ATTR: 12, STAR_ATTR: 13
   };
 
   const C = {
@@ -65,6 +66,25 @@
     [str, freq === undefined ? 92 : freq, 2.2, 0.35],
     [1.1, 1.60, angle === undefined ? 1.5708 : angle, sel === undefined ? SEL.ALL : sel],
     [0, 0, 0, 0]);
+
+  /*
+   * 「星位 + 属性图标」那一层（遮罩码 13，= 星数/阶数带 + 属性圆）。
+   *
+   * 为什么要单独给这两处补一层：**卡图系的工艺盖不到它们**。
+   * 面闪 / 金闪 / 银碎 / 浮雕这几条的遮罩是"卡图 / 卡图+卡名 / 卡名 / 效果框的字"，
+   * 而星位那一条与属性图标落在**卡框**里 —— 所以它们一直是"原印刷"。
+   * 而实卡里，从 Super Rare 往上、等级星与属性图标也是跟着工艺走的
+   * （第 10 期以后的加工；原始文档没写这一条，见 docs/rarity-shaders.md §3 的说明）。
+   *
+   * ⚠️ 金箔 / 铂金 / 彩虹 / 爆闪那几条**不需要**它：它们用的是"金属区"或"整卡面"遮罩，
+   *    本来就已经把这两处一起加工了（见 docs/rarity-shaders.md §3 那张表）。
+   */
+  const starAttr = (shader, str, extra) => {
+    if (shader === 'holo') return artHolo(str, SEL.STAR_ATTR);
+    if (shader === 'diagonal') return diagonal(str, SEL.STAR_ATTR, extra === undefined ? 26 : extra, 0.7854);
+    if (shader === 'emboss') return emboss(str, SEL.STAR_ATTR, 0.62, 52);
+    throw new Error('starAttr 不支持这个工艺: ' + shader);
+  };
 
   // 斜向碎冰
   const diagonal = (str, sel, freq, angle) => L('diagonal',
@@ -189,29 +209,36 @@
     {
       id: 'SR', code: 'SR', cn: '面闪', en: 'Super Rare', tier: 'base',
       feat: '卡图全息闪光，卡名通常不闪',
-      render: '全息闪膜只盖**卡图**（遮罩=卡图），卡名不碰 —— 这正是面闪与金闪的分界线。',
-      layers: [artHolo(0.95, SEL.ART), gloss(0.16, SEL.ART)]
+      render: '全息闪膜只盖**卡图**（遮罩=卡图），卡名不碰 —— 这正是面闪与金闪的分界线。' +
+        '**星位与属性图标再补一层薄全息**（它们是卡框上的两处，卡图遮罩盖不到；' +
+        '第 10 期以后的加工，见 §3）。',
+      layers: [artHolo(0.95, SEL.ART), gloss(0.16, SEL.ART), starAttr('holo', 0.50)]
     },
     {
       id: 'UR', code: 'UR', cn: '金闪 / 金亮', en: 'Ultra Rare', tier: 'base',
       feat: '卡图闪，卡名金色',
-      render: '面闪的底子（卡图全息）+ 卡名烫金。两层，顺序无所谓但名字放后面。',
-      layers: [artHolo(1.0, SEL.ART), gloss(0.14, SEL.ART), name(C.gold, 1.0, 1.0, 0)]
+      render: '面闪的底子（卡图全息）+ 卡名烫金。两层，顺序无所谓但名字放后面。' +
+        '**星位与属性图标也补一层薄全息**（同面闪，第 10 期以后的加工）。',
+      layers: [artHolo(1.0, SEL.ART), gloss(0.14, SEL.ART), starAttr('holo', 0.50),
+        name(C.gold, 1.0, 1.0, 0)]
     },
     {
       id: 'SER', code: 'SER', cn: '银碎', en: 'Secret Rare', tier: 'base',
       feat: '斜向碎冰状全息闪膜，覆盖卡名和卡图',
       render: '斜向碎冰膜盖**卡图+卡名**（文档原话："覆盖卡名和卡图"）。' +
-        '碎冰用斜光栅 + 沿栅格随机的碎片色相做出来，裂纹发白。',
-      layers: [diagonal(0.95, SEL.ART_NAME, 26, 0.7854), glitter(0.22, SEL.ALL, 60)]
+        '碎冰用斜光栅 + 沿栅格随机的碎片色相做出来，裂纹发白。' +
+        '**星位与属性图标再补一层同样的斜碎**（第 10 期以后的加工）。',
+      layers: [diagonal(0.95, SEL.ART_NAME, 26, 0.7854), starAttr('diagonal', 0.50),
+        glitter(0.22, SEL.ALL, 60)]
     },
     {
       id: 'UTR', code: 'UTR', cn: '3D / 浮雕', en: 'Ultimate Rare', tier: 'base',
       feat: '卡图有浮雕立体质感，触摸有凹凸',
       render: '把卡面明暗当高度场求梯度得法线，再用一盏方向光打亮 → 插画被"压"出立体感；' +
-        '卡名与效果框文字也一起压。**"触摸有凹凸"渲染不出来**，那一条只能靠手。',
+        '卡名与效果框文字也一起压。**星位与属性图标也压出凹凸**（实卡的浮雕本来就铺满整张卡面，' +
+        '第 10 期以后的加工）。**"触摸有凹凸"渲染不出来**，那一条只能靠手。',
       layers: [emboss(0.95, SEL.ART, 0.40, 52), emboss(0.75, SEL.NAME, 0.80, 60),
-        emboss(0.45, SEL.TEXT_INK, 0.80, 46)]
+        emboss(0.45, SEL.TEXT_INK, 0.80, 46), starAttr('emboss', 0.62)]
     },
     {
       id: 'HR', code: 'HR', cn: '全息 / 鬼闪', en: 'Holographic Rare (TCG: Ghost Rare)', tier: 'base',

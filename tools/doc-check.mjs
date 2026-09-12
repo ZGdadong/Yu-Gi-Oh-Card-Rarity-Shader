@@ -104,14 +104,14 @@ const shaderSrc = SH.BODY.holo;                   // 任何一个工艺正文里
 const prelude = SH.PRELUDE;
 const pickBody = prelude.slice(prelude.indexOf('float pickMask('), prelude.indexOf('/*', prelude.indexOf('float pickMask(')));
 const branches = (pickBody.match(/if \(s < /g) || []).length;
-check('pickMask 的 0..12 分支齐全（13 个）', branches === 13, `${branches} 个分支`);
-// §4 那张表的每一格里出现的数字，0..12 应该一个不少
+check('pickMask 的 0..13 分支齐全（14 个）', branches === 14, `${branches} 个分支`);
+// §4 那张表的每一格里出现的数字，0..13 应该一个不少
 const ptableSrc = doc.slice(doc.indexOf('### 遮罩选择码'), doc.indexOf('### 强度是怎么算的'));
 const codesInDoc = (ptableSrc.match(/(?:^\||\|)\s*(\d+)\s*\|/gm) || [])
   .map((s) => parseInt(s.replace(/\|/g, '').trim(), 10));
 const missingCodes = [];
-for (let i = 0; i <= 12; i++) if (codesInDoc.indexOf(i) < 0) missingCodes.push(i);
-check('§4 的遮罩选择码表里 0..12 都能查到', missingCodes.length === 0,
+for (let i = 0; i <= 13; i++) if (codesInDoc.indexOf(i) < 0) missingCodes.push(i);
+check('§4 的遮罩选择码表里 0..13 都能查到', missingCodes.length === 0,
   missingCodes.length ? '缺 ' + missingCodes.join(',') : codesInDoc.join(' '));
 
 // ------------------------------------------------------------ 自动生成的表 ----

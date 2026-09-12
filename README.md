@@ -139,7 +139,10 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 
 掩膜通道分配与"卡图的几块区域怎么定"的细节见 [`docs/rarity-shaders.md` §3](docs/rarity-shaders.md)。
 后两块是后加的：面板「区域」组最后 7 根滑条可调，掩膜调试层把它们画成**橙 / 紫**，
-配方里把某一层的遮罩选择填 `SEL.STAR`(11) / `SEL.ATTR`(12) 就能单独加工那两处。
+配方里把遮罩选择填 `SEL.STAR`(11) / `SEL.ATTR`(12) / `SEL.STAR_ATTR`(13，两块一起) 就能加工它们。
+**SR / UR / SER / UTR 已经各带一层 13 号**（星位与属性不再只是原印刷 —— 第 10 期以后的加工，
+逐条核对与出处见 §3）；金箔 / 铂金 / 彩虹 / 爆闪那几条用"金属区 / 整卡面"遮罩，本来就已经覆盖。
+想只看这两块：预设 **★ 只加工星数 / 阶数带** / **★ 只加工属性圆**。
 
 ![掩膜](docs/mask-preview.png)
 
@@ -298,12 +301,14 @@ RESULT: PASS  （63 项）
   罕贵度        图层                        均值差   变化像素
   N            （无）                       0.00     0.0%     ← 本来就与平卡完全相同
   R            name                         3.40     2.4%
-  SR           holo+gloss                  23.97    41.0%
-  UTR          emboss+emboss+emboss        17.77    49.6%
+  SR           holo+gloss+holo              25.58    47.1%     ← 末层是星位+属性（遮罩码 13）
+  UTR          emboss+emboss+emboss+emboss  19.31    55.6%     ← 同上
   HR           ghost+emboss                12.31    40.6%     ← 幽灵只压怪物图框（卡图占 44%）
   GUR          metal+metal+name            31.70    81.2%
   KC Rare      holo+gloss+name+kc           17.25    48.8%     ← 鼠标附近那一块显形（≈45%）
   Millennium   millennium                   8.00    21.9%     ← 一个角度只显形 20% 上下
+  DT-SR        holo+gloss+holo             25.58    47.1%     ← 与 SR 逐像素相同（like: 继承）
+  DT-PR        parallel                    35.20    99.0%     ← 与 PR 逐像素相同
   NR           （无）                       0.00     0.0%     ← 本来就与平卡完全相同
 
 -- ② 逐工艺单独作用（借 SR 的位置，只留这一层）--
