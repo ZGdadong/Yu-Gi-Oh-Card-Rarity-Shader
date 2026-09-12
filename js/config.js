@@ -40,7 +40,7 @@
     // ---- ② 工艺 ----
     { key: 'mName', group: '工艺', label: '卡名工艺', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: '银字 / 金名 / 红名 / 白碎名 的强度' },
     { key: 'mHolo', group: '工艺', label: '全息闪膜', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: 'holo：宽光带全息，面闪的底子' },
-    { key: 'mParallel', group: '工艺', label: '爆闪（平行膜）', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: 'parallel：极细平行线光栅' },
+    { key: 'mParallel', group: '工艺', label: '爆闪（平行膜）', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: 'parallel：整卡极细的不规则拉丝膜 + 沿垂直方向的缓变色带（原来是等距线栅，渲染出来只有 6.6px 一根，看着像 CRT 扫描线，已换掉）' },
     { key: 'mDiagonal', group: '工艺', label: '碎冰（斜碎）', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: 'diagonal：斜光栅 + 碎片色相' },
     { key: 'mPrismatic', group: '工艺', label: '棱彩（白碎）', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: 'prismatic：交叉光栅，交叉点炸白' },
     { key: 'mEmboss', group: '工艺', label: '浮雕', type: 'range', min: 0, max: 2, step: 0.01, def: 1, hint: 'emboss：把卡面明暗当高度场打光' },

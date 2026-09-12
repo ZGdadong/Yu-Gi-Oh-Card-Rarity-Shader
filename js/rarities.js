@@ -245,7 +245,7 @@
     {
       id: 'STARLIGHT', code: 'Starlight Rare', cn: '星光 / 星闪', en: 'Starlight Rare', tier: 'base',
       feat: '整张卡覆盖平行全息闪膜',
-      render: '整卡铺极细的平行光栅，再叠一层宽光带全息和闪粉 —— 转卡时整片一起扫过去。',
+      render: '整卡铺极细的平行膜（**不规则的拉丝**，不是等距线栅），再叠一层宽光带全息和闪粉 —— 转卡时整片一起扫过去。',
       layers: [parallel(0.85, SEL.ALL, 120, 1.5708), artHolo(0.45, SEL.ALL, 4.0), glitter(0.30, SEL.ALL, 80)]
     },
     {
@@ -355,7 +355,7 @@
     {
       id: 'PR', code: 'PR', cn: '爆闪', en: 'Parallel Rare', tier: 'parallel',
       feat: '平行闪膜统称',
-      render: '纯粹的平行闪膜：极细的线光栅 + 沿垂直方向的缓变色带。',
+      render: '纯粹的平行闪膜：铺满整卡的**不规则拉丝**（不是等距线栅）+ 沿垂直方向的缓变色带 —— 转卡时整片彩虹一起扫过去。',
       layers: [parallel(1.0, SEL.ALL, 92, 1.5708)]
     },
     {

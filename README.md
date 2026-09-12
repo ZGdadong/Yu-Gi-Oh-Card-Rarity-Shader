@@ -91,7 +91,7 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | 类别 | 工艺 | 干什么 |
 | --- | --- | --- |
 | **闪膜** | `holo` | 宽光带全息（面闪的底子） |
-| | `parallel` | 极细平行线光栅，倾斜时整片彩虹一起扫过去（爆闪） |
+| | `parallel` | 整卡极细的**不规则拉丝**膜 + 沿垂直方向的缓变色带，倾斜时整片彩虹一起扫过去（爆闪）。**原来是一条等距线栅**，6.6px 一根、看着像 CRT 扫描线，已换掉 —— 见 [`docs/rarity-shaders.md` §4](docs/rarity-shaders.md) |
 | | `diagonal` | 斜光栅 + 沿栅格随机的碎片色相，裂纹发白（银碎） |
 | | `prismatic` | 正反两个方向的细光栅交叉，交叉点炸白（白碎） |
 | | `starfoil` / `mosaic` / `voronoi` | 星箔 / 马赛克 / 碎箔 |
