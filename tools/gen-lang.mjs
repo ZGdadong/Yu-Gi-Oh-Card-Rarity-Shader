@@ -52,6 +52,19 @@ const CHROME = {
   'info.layers': '图层',
 
   'panel.title': '参数',
+
+  // 「卡图」那一行的 ⟳ 刷新按钮与「区域」组（原来只在 zh-CN.js 里手加过，
+  // 一跑 --force 就会丢 —— 补进 CHROME 表，重生成才是无损的）
+  "panel.cardRefresh": "重新扫描 images/，把新加的卡图烤出来（file:// 下会弹文件选择框；按住 Shift 点则强制手动选）",
+  "group.区域": "区域",
+  "status.cardScanning": "正在扫描 images/ …",
+  "status.cardAdded": "已加入 {n} 张：{names}（运行时烤的，刷新页面就没了 —— 要留下请跑 node tools/embed-card.mjs）",
+  "status.cardNoNew": "images/ 下 {n} 张都已经烤过了，没有新图",
+  "status.cardAllKnown": "选的这几张都已经在列表里了，没有新增",
+  "status.cardCancelled": "没有选文件，卡图没变",
+  "status.cardScanUnsupported": "file:// 下浏览器不让读目录，请手动选 images/ 里那张新图",
+  "status.cardRefreshGone": "刷新卡图不可用：js/card-refresh.js 没加载",
+  "status.cardFail": "烘焙失败：{names}",
   'panel.close': '关闭面板',
 
   'tier.base': '§1 基础罕贵度',

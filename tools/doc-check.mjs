@@ -44,8 +44,8 @@ check('2 个加法混合的工艺', SH.ADDITIVE.length === 2 &&
   SH.ADDITIVE.every((s) => doc.indexOf('`' + s + '`') >= 0), SH.ADDITIVE.join(' '));
 
 check('43 条罕贵度', RAR.LIST.length === 43 && doc.indexOf('43 条罕贵度') >= 0, `${RAR.LIST.length} 条`);
-check('39 个参数', CFG.SPEC.length === 39 && doc.indexOf('39 个参数') >= 0, `${CFG.SPEC.length} 个`);
-check('22 个预设', CFG.PRESETS.length === 22, `${CFG.PRESETS.length} 个`);
+check('53 个参数', CFG.SPEC.length === 53 && doc.indexOf('53 个参数') >= 0, `${CFG.SPEC.length} 个`);
+check('23 个预设', CFG.PRESETS.length === 23, `${CFG.PRESETS.length} 个`);
 
 const tierCount = RAR.LIST.reduce((a, r) => { a[r.tier] = (a[r.tier] || 0) + 1; return a; }, {});
 check('分节数量：基础 12 / 高级 10 / 平行 10 / DT 6 / 其他 5',
@@ -333,9 +333,12 @@ check('总结文档里的 verify 项数与实际报告一致',
   verifyTotal === null ? true : sumVerify === verifyTotal,
   verifyTotal === null ? `文档写 ${sumVerify}（还没跑过 verify，无法核对）`
     : `文档 ${sumVerify} · 实际 ${verifyTotal}`);
-check('总结文档里的 doc-check 项数与本次实际一致',
-  sumDocCheck === results.length + 1,
-  `文档 ${sumDocCheck} · 本次 ${results.length + 1}`);
+/*
+ * "doc-check 项数"这一条**故意留到最后再判**（见文件末尾）：
+ * 原先它写在这里、拿 `results.length + 1` 当"实际项数"，可这个数在脚本跑到一半时
+ * 只是个中间值 —— 结果是**逼着文档写一个错的数字**（文档写 52，实际 56）。
+ * 放到最后，"实际项数"才是真的总项数。
+ */
 
 // 总结文档必须覆盖后来加的两块功能（曾经整块漏掉过）
 check('总结文档写了"换卡图"的多卡流程（不是旧的手工量边界）',
@@ -355,6 +358,11 @@ check('总结文档里的语言数与 Languages/languages.js 一致',
   langManifest.map((l) => l.code).join(' · '));
 
 // ------------------------------------------------------------------ 汇总 ----
+// 放在最后：这时候 `results.length + 1`（加上这一条自己）才是**真正的总项数**
+check('总结文档里的 doc-check 项数与本次实际一致',
+  sumDocCheck === results.length + 1,
+  `文档 ${sumDocCheck} · 实际 ${results.length + 1}`);
+
 const failed = results.filter((r) => !r.ok);
 console.log('\n' + '='.repeat(64));
 if (failed.length) {

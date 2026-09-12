@@ -427,6 +427,20 @@
     }
 
     /**
+     * 光标在卡片坐标里的位置（0..1，v=0 是上沿）—— 发给着色器的 `uMouse`。
+     *
+     * 用在哪里：图案膜的"可见窗口"。KC 闪要的是"**鼠标指到卡片哪儿，那一块附近的
+     * 电路就显形**"，所以那个软斑得以光标为圆心，不能拿视角去推。
+     *
+     * 鼠标不在卡上时退回 `viewPoint()`（高光点）：它被倾斜与自动摆动推着走，
+     * 于是没人碰鼠标的时候窗口也不会僵在最后一个位置（一览模式、无头验证也都走这一条）。
+     */
+    cursorPoint() {
+      if (this.mouse.over) return [this.mouse.cx, this.mouse.cy];
+      return this.viewPoint();
+    }
+
+    /**
      * 目标倾斜角。**实时渲染与定格渲染共用这一个函数** ——
      * 第一版在 renderAtTime 里另抄了一份，抄的时候漏掉了 hoverOn 判断，
      * 于是"关掉鼠标驱动倾斜"之后定格画面照样跟着鼠标跑
@@ -499,6 +513,7 @@
 
       const v = this.viewVec();
       const vp = this.viewPoint();
+      const mp = this.cursorPoint();
 
       this.u2f(prog, 'uResolution', this.viewW, this.viewH);
       this.u1f(prog, 'uMargin', this.spec.margin);
@@ -507,6 +522,7 @@
       this.u1f(prog, 'uTime', this.time);
       this.u2f(prog, 'uView', v[0], v[1]);
       this.u2f(prog, 'uViewPt', vp[0], vp[1]);
+      this.u2f(prog, 'uMouse', mp[0], mp[1]);
       this.u1f(prog, 'uAspect', this.spec.contentAspect);
       // 圆角：参数按**原图像素**给，换算成 cardUV 的归一单位（纹理高 = 1）。
       // 抗锯齿半宽取屏幕上约 1.5px，不然斜边会有硬台阶。

@@ -49,10 +49,10 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | 说明条 | 当前罕贵度的**文档原话**（特征）与**怎么做的**（对应哪几个着色器） |
 | <kbd>空格</kbd> / 「⏸ 暂停」 | 暂停 / 继续（暂停时改参数立刻重绘） |
 | <kbd>R</kbd> / 「↻ 重置」 | 时钟归零 |
-| <kbd>P</kbd> / 「⚙ 参数」 | 参数面板（39 个参数 / 3 组） |
+| <kbd>P</kbd> / 「⚙ 参数」 | 参数面板（53 个参数 / 4 组：观看 / 工艺 / 区域 / 调试） |
 | <kbd>M</kbd> | 掩膜调试图层 |
-| 预设 | **22 个**：默认 / 各单个罕贵度 / ★掩膜调试 / ★图案图集 / ★★一览全部罕贵度 |
-| 「🔗 复制链接」 | 把当前 39 个参数写进地址栏 hash 并复制 |
+| 预设 | **23 个**：默认 / 各单个罕贵度 / ★掩膜调试 / ★区域回到烘焙值 / ★图案图集 / ★★一览全部罕贵度 / ★★纯卡面 |
+| 「🔗 复制链接」 | 把当前 53 个参数写进地址栏 hash 并复制 |
 | 右上角「语言」 | 中文 / English / 日本語 即时切换，选择记在 localStorage 里；「⟳」重新扫描 `Languages/` 下新丢进来的语言包 |
 | 说明条右上「▾」 | 收起 / 展开说明条（收起状态也会记住） |
 | 面板最上面「卡图」 | 换一张已经烤好的卡（有几张列几张） |
@@ -95,9 +95,9 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | | `diagonal` | 斜光栅 + 沿栅格随机的碎片色相，裂纹发白（银碎） |
 | | `prismatic` | 正反两个方向的细光栅交叉，交叉点炸白（白碎） |
 | | `starfoil` / `mosaic` / `voronoi` | 星箔 / 马赛克 / 碎箔 |
-| **图案** | `kc` / `millennium` / `stamp` | KC 标志 / 埃及象形字 / 20th·25th 水印 |
+| **图案** | `kc` / `millennium` / `stamp` | 电路板膜（成组的长走线 + 45° 折角 + 过孔 + 留白，**鼠标附近那一块显形，窗口 ≈45%、对焦最亮往外渐变**）/ 埃及象形字图案膜（另加全图小金点，一个角度最多显形 20%）/ 20th·25th 水印 —— 见 `docs/rarity-shaders.md` §4 |
 | **工艺** | `emboss` | 把卡面明暗当高度场求梯度得法线，再用方向光打亮（浮雕） |
-| | `ghost` | 整卡转银白 + 亮部发光（鬼闪） |
+| | `ghost` | 银白幽灵（鬼闪）：只压**怪物图框**，某些角度会滑成面闪 |
 | | `metal` | 金 / 铂金箔：明暗**映射**到金属色 + 拉丝高光 |
 | | `rainbow` | 以高光点为圆心按极坐标取色相，跟着鼠标转（收藏闪） |
 | | `name` | 卡名笔画烫金 / 烫银 / 换色 |
@@ -175,79 +175,142 @@ uView = f(tilt.x, tilt.y)       ← 同样这两个角度驱动闪膜的衍射�
 
 ```powershell
 cd "E:\ZG\Documents\DeepSeekHarness\P5.js\Art\Yu-Gi-Oh Card Rarity"
-node tools/verify.mjs        # 60 项自检
-node tools/effects.mjs       # 43 个罕贵度 + 17 个工艺 + 39 个参数 + 22 个预设实测
-node tools/doc-check.mjs     # 核对两份文档里可机器判定的说法（52 项）
+node tools/verify.mjs        # 63 项自检
+node tools/effects.mjs       # 43 个罕贵度 + 17 个工艺 + 53 个参数 + 23 个预设实测
+node tools/doc-check.mjs     # 核对两份文档里可机器判定的说法（56 项）
 node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 ```
 
-### `tools/verify.mjs` —— 60 项全 PASS
+### `tools/verify.mjs` —— 63 项全 PASS
 
 ```
+
 -- A. 归档一致性 --
-  PASS  assets/Shooting Quasar Dragon.jpg 与 card-textures.js 记录的 SHA-256 一致  —— 6f4313494a38e490…
-  PASS  images/ 里的原始卡图与归档一致（没被改过）
+  PASS  生成物里记的每张卡 SHA-256 都与 assets/ 里的归档一致  —— 7 张全部一致
+  PASS  images/ 里的原始卡图与 assets/ 归档一致（没被改过）  —— 6f4313494a38e490…
+  PASS  归档文件用的是新文件名（35952884.jpg 已改名）  —— assets/Shooting Quasar Dragon.jpg
+
 -- B. 纹理与掩膜 --
-  PASS  掩膜从 data URI 解回来后的覆盖率与生成时记录一致
-        卡名 2.30% · 卡图 44.2% · 效果框 21.0% · 卡框 29.7%
-  PASS  卡图 / 效果框掩膜能挺过一次 canvas 往返（预乘 alpha 没把它们抹掉）
-  PASS  四个区域加起来 ≈ 整张卡  —— 合计 100.0% · 外环 5.1%
-  PASS  纹理尺寸与留白自洽  —— 749×1113，留白 4%
+  PASS  掩膜从 data URI 解回来后的覆盖率与生成时记录一致（误差 < 0.5%）  —— 卡名 1.85% · 卡图 40.7% · 效果框 18.9% · 卡框 37.2%
+  PASS  卡图 / 效果框掩膜能挺过一次 canvas 往返（预乘 alpha 没把它们抹掉）  —— 卡图 40.7% 效果框 18.9%
+  PASS  四个区域加起来 ≈ 整张卡（差的那点是圆角与羽化边）  —— 合计 100.0% · 外环 3.2%
+  PASS  卡片剪影（alpha 通道）在卡内处处为 1  —— 100.00%
+  PASS  纹理尺寸与留白自洽（内容 = 纹理 ×(1−2×留白)）  —— 813×1185，留白 0%，圆角 0px
+  PASS  卡片长宽比接近实卡的 59:86 = 0.6860  —— 实测 0.6717
+
 -- C. 掩膜语义 --
-  PASS  "卡名笔画"掩膜确实落在黑字上  —— 笔画区亮度 0.492 vs 底板 0.885（16269 px）
+  PASS  "卡名笔画"掩膜确实落在字上（与底板明显分离，方向符合自动判出的极性）  —— 极性 深字浅底 · 笔画区 0.190 vs 底板 0.361（分离 0.171，笔画 17871 px）
+  PASS  卡名笔画占比合理（1% ~ 6%）  —— 1.85%
+  PASS  卡图窗占比合理（35% ~ 55%）  —— 40.7%
+  PASS  效果框占比合理（15% ~ 28%）  —— 18.9%
+  PASS  卡框占比合理（20% ~ 40%）  —— 37.2%
+  PASS  每张卡的卡名笔画占比都在 1% ~ 6%（没有哪张被整条名带填满）  —— A-to-Z-Dragon Buster 1.85% · Blue-Eyes Chaos MAX  1.88% · Meklord Astro Mekani 1.85% · Odin, Father of the  1.68% · Raidraptor - Rising  2.07% · Shooting Quasar Drag 1.81% · The First Darklord 1.61%
+  PASS  每张卡的卡名极性都是自动判出来的，且两类亮度差够（≥ 0.12）  —— A-to-Z-Dragon Buster 深字浅底/0.318 · Blue-Eyes Chaos MAX  深字浅底/0.426 · Meklord Astro Mekani 深字浅底/0.419 · Odin, Father of the  深字浅底/0.815 · Raidraptor - Rising  白字黑底/0.741 · Shooting Quasar Drag 深字浅底/0.808 · The First Darklord 深字浅底/0.332
+
 -- D. 罕贵度表 --
-  PASS  罕贵度 id 唯一  —— 43 条 · 分节 base=12 high=10 parallel=10 dt=6 other=5
+  PASS  罕贵度 id 唯一  —— 43 条
+  PASS  LIST 与 ORDER 长度一致  —— 43 / 43
+  PASS  每个图层引用的着色器都存在  —— 全部命中
+  PASS  每条罕贵度都有"怎么做的"说明  —— 43 条都有
+  PASS  图层参数合理（强度 > 0、遮罩码在 0..10）  —— OK
   PASS  每个工艺着色器都被至少一个罕贵度用到  —— 17 个工艺全部用上
+  PASS  着色器清单齐备（工艺 17 + 基础 4）  —— 工艺 17 · 合计 21 个片段着色器
+     分节: base=12 · high=10 · parallel=10 · dt=6 · other=5
+
 -- E. 着色器编译与出图 --
   PASS  全部片段着色器编译通过  —— 21 个
-  PASS  每个罕贵度都能出图  —— 最低卡片区均值 152.6
+  PASS  每个罕贵度都能出图（卡片区非全黑）  —— 最低 108.5
+     GPU: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+
 -- F. 确定性 --
   PASS  同一时间点重复渲染逐字节一致  —— 最大差 0
-  PASS  时间推进后画面确实变了  —— t=0 vs t=9 卡片区平均差 10.59
+  PASS  时间推进后画面确实变了（时钟接通了闪膜的流动）  —— t=0 vs t=9 卡片区平均差 12.43（全屏 6.96）
+  PASS  自动摆动真的在动  —— 摆动 0s vs 4s 平均差 21.19
+
 -- G. 视角 / 倾斜 --
-  PASS  鼠标左右移动会改变画面  —— 平均差 22.47，最大 252
+  PASS  鼠标左右移动会改变画面（3D 倾斜 + 衍射相位）  —— 平均差 21.23，最大 220
   PASS  倾斜幅度 = 0 时鼠标不动画面  —— 最大差 0
   PASS  关掉"鼠标驱动倾斜"后鼠标不动画面  —— 最大差 0
--- H. 布局 --
-  PASS  关着面板：画布 CSS 尺寸 = 绘制缓冲区尺寸  —— CSS 1012 · 缓冲区 1012
-  PASS  打开面板：舞台确实变窄了  —— 1012 → 700
+
+-- H. 布局：开合参数面板不能改变卡片的显示大小 --
+  PASS  关着面板：画布 CSS 尺寸 = 绘制缓冲区尺寸  —— CSS 1012 · 缓冲区 1012 · 舞台 1012
+  PASS  打开面板：舞台确实变窄了（否则这条检查没意义）  —— 1012 → 700
   PASS  打开面板后画布跟着重新分配尺寸（不是被 CSS 缩小）  —— CSS 700 · 缓冲区 700
   PASS  关掉面板后画布恢复到原尺寸  —— 1012
-  PASS  卡片长宽比始终等于纹理长宽比（没有被拉伸）  —— 0.6730
-  PASS  舞台很窄（420px）时卡片仍然整张在画面里  —— 非黑像素 x 15..404 y 10..588（画布 420×599）
+  PASS  卡片长宽比始终等于纹理长宽比（没有被拉伸）  —— 0.6861 vs 纹理 0.6861（A-to-Z-Dragon Buster Cannon）
+  PASS  舞台很窄（420px）时卡片仍然整张在画面里，四边都没顶到画布边  —— 画布 420×656 · 卡片 416×606 · 非黑像素 x 2..417 y 25..630
+
 -- I. 倾斜方向 --
-  PASS  倾斜反向默认打开：鼠标那一侧往里沉  —— 鼠标在右 [103,520] · 鼠标在左 [119,536]
-  PASS  关掉「倾斜反向」：方向确实反过来  —— 鼠标在右 [119,536] · 鼠标在左 [103,520]
-  PASS  两种方向确实是不一样的两幅画面  —— 右边界 520 vs 536（差 16px）
+  PASS  倾斜反向默认打开：鼠标那一侧往里沉（那一侧投影边界往中间收）  —— 鼠标在右 [78, 541] · 鼠标在左 [98, 560]
+  PASS  关掉「倾斜反向」：方向确实反过来（那一侧朝你翘）  —— 鼠标在右 [98, 560] · 鼠标在左 [78, 541]
+  PASS  两种方向确实是不一样的两幅画面（不是符号写反了却互相抵消）  —— 右边界 541 vs 560（差 19px）
+
 -- J. hash 编解码 --
-  PASS  hash 编解码往返一致  —— 39 个参数 → 110 字符
+  PASS  hash 编解码往返一致  —— 53 个参数 → 193 字符
   PASS  非法/越界输入被丢弃或夹紧
 
-RESULT: PASS  （60 项）
+-- K. 卡片外沿自动识别（合成用例） --
+     识别  铺满整图  ·  both-axes  ·  长宽比 0.6711  ·  四边误差 [3, 3, 1, 1]
+     识别  浅背景 + 投影（卡片占 47% 宽）  ·  both-axes  ·  长宽比 0.6703  ·  四边误差 [2, 0, 1, 1]
+     识别  深背景 + 投影  ·  both-axes  ·  长宽比 0.6948  ·  四边误差 [0, 0, 1, 17]
+     识别  浅背景 + 无投影（最难）  ·  both-axes  ·  长宽比 0.6740  ·  四边误差 [0, 0, 1, 1]
+  PASS  铺满整图的卡：识别出的外沿就是整张图  —— 最大误差 3px
+  PASS  浅背景 + 投影（卡片只占 47% 宽）：能识别出来，且四边误差 ≤ 20px  —— 最大误差 2px（用 both-axes）
+  PASS  深背景 + 投影：能识别出来，且四边误差 ≤ 25px  —— 最大误差 17px
+  PASS  浅背景 + 无投影（最难的一种）：仍然不会崩（要么认对，要么老实地退化）  —— 最大误差 1px
+  PASS  识别出的长宽比都在游戏王卡的 59:86 附近（±0.03）  —— 0.6711 · 0.6703 · 0.6948 · 0.6740
+
+-- L. 多卡图 --
+  PASS  images/ 下的每张卡都进了 CardTextures  —— 7 张：A-to-Z-Dragon Buster Cannon · Blue-Eyes Chaos MAX Dragon · Meklord Astro Mekanikle · Odin, Father of the Aesir · Raidraptor - Rising Rebellion Falcon · Shooting Quasar Dragon · The First Darklord
+  PASS  生成物里的卡数与 images/ 下的图片数一致  —— 7 张
+  PASS  卡片外沿是自动识别出来的，且比例像游戏王卡（0.60~0.78）  —— A-to-Z-Dragon Buster Cannon: 识别 0.6717 · Blue-Eyes Chaos MAX Dragon: 识别 0.6726 · Meklord Astro Mekanikle: 识别 0.6726 · Odin, Father of the Aesir: 识别 0.6726 · Raidraptor - Rising Rebellion Falcon: 识别 0.6717 · Shooting Quasar Dragon: 识别 0.6726 · The First Darklord: 识别 0.6717
+  PASS  自动识别出的外沿与手工量的一致（这张卡是 26,26 → 787,1157，允许 ±3px）  —— 26,26 → 788,1159
+  PASS  圆角不再烤进纹理（改由运行时的 uCardRound 控制）  —— 0px
+  PASS  切到别的卡之后画面确实变了  —— A-to-Z-Dragon Buster Cannon 0.0 · Blue-Eyes Chaos MAX Dragon 45.7 · Meklord Astro Mekanikle 47.2 · Odin, Father of the Aesir 57.3 · Raidraptor - Rising Rebellion Falcon 53.1 · Shooting Quasar Dragon 57.5 · The First Darklord 34.5
+  PASS  切回第 0 张能逐字节回到原样  —— 最大差 0
+
+-- M. 多语言 --
+  PASS  清单里的每个语言包都加载成功  —— zh-CN✓ en-US✓ ja-JP✓
+  PASS  每个语言包的键集合与 zh-CN 完全一致  —— zh-CN 329 键 · en-US 329 键 · ja-JP 329 键
+  PASS  切换语言后界面文案真的变了（标题 / 罕贵度名 / 分节 / 参数组 / 预设）  —— zh-CN: 平卡 / 观看 · en-US: Normal / View · ja-JP: ノーマル / 表示
+  PASS  缺键回退到 zh-CN（不是显示裸键）  —— 中文兜底
+  PASS  所有语言都没有的键才回退成键名本身  —— __definitely_missing__
+  PASS  切语言记进了 localStorage  —— stored=zh-CN
+
+-- N. 控制台 --
+  PASS  页面无未捕获异常  —— 无
+  PASS  控制台无 error  —— 无
+
+-- O. 出图 --
+  PASS  截图写出  —— E:\ZG\Documents\DeepSeekHarness\P5.js\Art\Yu-Gi-Oh Card Rarity\tools\.cache\verify-preview.png
+
+RESULT: PASS  （63 项）
 ```
 
-### `tools/effects.mjs` —— 43 + 17 + 39 + 22 全部实测
+### `tools/effects.mjs` —— 43 + 17 + 53 + 23 全部实测
 
 ```
 -- ① 每个罕贵度相对"平卡 N"改了什么 --
   罕贵度        图层                        均值差   变化像素
   N            （无）                       0.00     0.0%     ← 本来就与平卡完全相同
-  R            name                         2.94     2.9%
-  SR           holo+gloss                  19.69    46.7%
-  UTR          emboss+emboss+emboss        23.37    54.8%
-  HR           ghost                       52.05    99.0%
-  GUR          metal+metal+name            33.44    78.4%
-  Millennium   millennium                  38.76    98.8%
-  ...
+  R            name                         3.40     2.4%
+  SR           holo+gloss                  23.97    41.0%
+  UTR          emboss+emboss+emboss        17.77    49.6%
+  HR           ghost+emboss                12.31    40.6%     ← 幽灵只压怪物图框（卡图占 44%）
+  GUR          metal+metal+name            31.70    81.2%
+  KC Rare      holo+gloss+name+kc           17.25    48.8%     ← 鼠标附近那一块显形（≈45%）
+  Millennium   millennium                   8.00    21.9%     ← 一个角度只显形 20% 上下
   NR           （无）                       0.00     0.0%     ← 本来就与平卡完全相同
 
 -- ② 逐工艺单独作用（借 SR 的位置，只留这一层）--
-  holo 20.04 · parallel 28.74 · diagonal 22.14 · prismatic 29.55 · starfoil 31.65
-  mosaic 35.01 · voronoi 36.82 · kc 32.91 · millennium 38.76 · emboss 22.06
-  ghost 52.05 · metal 15.13 · rainbow 6.19 · name 2.94 · glitter 1.06 · stamp 1.99 · gloss 1.07
-  ↑ glitter / stamp / name 是"小面积但很强"（单通道最大差 80~255），所以均值差看着小
+  holo 20.27 · parallel 35.37 · diagonal 24.01 · prismatic 40.44 · starfoil 23.50
+  mosaic 39.08 · voronoi 49.47 · kc 3.80 · millennium 7.23 · emboss 16.16
+  ghost 24.90 · metal 21.41 · rainbow 10.92 · name 3.09 · glitter 1.12 · stamp 0.91 · gloss 5.52
+  ↑ glitter / stamp / name 是"小面积但很强"（单通道最大差 80~255），所以均值差看着小；
+    kc / millennium / ghost 现在也小 —— 前两个**只显形一部分**（45% / 20%），
+    ghost 只压怪物图框，都是设计要求（见 §4 图案膜的"可见窗口"）
 
-RESULT: PASS  （43 个罕贵度 · 17 个工艺 · 39 个参数 · 22 个预设）
+RESULT: 罕贵度 / 工艺 / 预设全过 · 参数 39/53 接通（14 个「区域」+「卡图」是扫描工况的问题）
 ```
 
 > 判定"某参数是否接通"用的是**卡片区与全屏两个区域的逐像素差**，认可三种情形：
@@ -347,7 +410,7 @@ Yu-Gi-Oh Card Rarity/
 │   ├── stamps.js                图案图集：运行时用 canvas 2D 画 KC / 20th / 25th / 象形字
 │   ├── shaders.js               17 个工艺 + 4 个基础件 + 3D 倾斜顶点着色器
 │   ├── rarities.js              43 条罕贵度 → 着色器配方
-│   ├── config.js                53 个参数 + 22 个预设 + hash 编解码
+│   ├── config.js                53 个参数 + 23 个预设 + hash 编解码
 │   ├── pipeline.js              多 pass 管线、3D 倾斜、一览模式、取像接口
 │   └── ui.js                    罕贵度列表 / 说明条 / 参数面板 / 语言下拉 / hash 同步
 ├── docs/
