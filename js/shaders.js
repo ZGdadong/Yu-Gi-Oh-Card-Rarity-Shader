@@ -64,6 +64,8 @@ uniform sampler2D uStamp;     // 图案图集 4×2 格
 uniform vec4  uRectArtOuter;  // 卡图窗外框的矩形 (x0,y0,x1,y1)，cardUV 坐标
 uniform vec4  uRectArtInner;  // 卡图窗内沿（插画本身）
 uniform vec4  uRectTextBox;   // 效果框（含 ATK/DEF 带）
+uniform vec4  uRectStar;      // 星数 / 阶数带 (x0,y0,x1,y1)，名带与卡图窗之间那一条
+uniform vec4  uCircleAttr;    // 属性圆 (圆心 x, 圆心 y, 半径, 软边)，半径单位是"卡高 = 1"
 uniform vec4  uContent;       // 卡片内容在纹理里的归一化矩形（去掉四周留白）
 uniform vec2  uResolution;    // 目标像素尺寸
 uniform float uMargin;        // 卡图纹理四周留白比例
@@ -187,18 +189,38 @@ float rectMask(vec2 cu, vec4 r, float soft) {
 }
 
 /*
+ * 软边**圆**掩膜（卡片相对坐标）。属性图标（光/暗/地/水/炎/风/神）是名字后面一个圆，
+ * 用矩形去框会连带把卡框那圈深色边一起加工，看着就是个方块 —— 所以单独走圆。
+ *
+ * c = (圆心 x, 圆心 y, 半径, 软边)；圆心是 cardUV，**半径的单位是"卡高 = 1"**
+ * （和 uCardRound 同一个口径）。所以 x 要先乘长宽比换算成等比坐标，
+ * 否则量出来的圆在屏幕上会被拉成横着的椭圆。
+ */
+float circleMask(vec2 cu, vec4 c) {
+    vec2 d = vec2((cu.x - c.x) * uAspect, cu.y - c.y);
+    float soft = max(c.w, 0.0005);
+    return 1.0 - smoothstep(c.z - soft, c.z + soft, length(d));
+}
+
+/*
  * 遮罩选择。罕贵度全靠"加工哪一块"区分，所以这份清单就是这份文档的核心词汇表：
  *   0 全卡面   1 卡图   2 卡框   3 卡名   4 效果框   5 卡图+卡框
  *   6 金属区（卡框+卡名+卡图外环）   7 卡框+卡图外环
  *   8 效果框里的字（按暗度从效果框里抠）   9 卡框+卡名   10 卡图+卡名
+ *   11 星数 / 阶数带   12 属性圆（名字后面那个圆）
  *
- * 五块区域的来源：
+ * 七块区域的来源：
  *   卡名（笔画）/ 卡片剪影 → 掩膜纹理的 R / A。**必须烘焙** —— 笔画是从图里按暗度抠的，
  *      没法用矩形算出来。
- *   卡图窗外框 / 卡图窗内沿 / 效果框 → 按 uRectArtOuter / uRectArtInner / uRectTextBox
- *      三个矩形**现算**。这三块本来就是纯矩形、不依赖图像内容，挪到着色器里之后就能做成
+ *   卡图窗外框 / 卡图窗内沿 / 效果框 / 星数阶数带 / 属性圆 → 按 uRectArtOuter /
+ *      uRectArtInner / uRectTextBox / uRectStar / uCircleAttr **现算**。
+ *      这五块本来就是纯几何（矩形、圆），不依赖图像内容，挪到着色器里之后就能做成
  *      侧栏「区域」那组滑条**实时可调**（拖一下立刻看得见，不用重烤一次 35 秒）。
- *   卡框（= 卡片 − 卡图窗外框 − 效果框）与卡图外环（= 卡图窗外框 − 卡图内沿）由上面三块推出。
+ *   卡框（= 卡片 − 卡图窗外框 − 效果框）与卡图外环（= 卡图窗外框 − 卡图内沿）由上面几块推出。
+ *
+ * ⚠️ 星带与属性圆**故意压在卡框上面**：它们落在卡框里（星位那一条、名字右边那个圆
+ *    都在"整卡 − 卡图窗 − 效果框"这一块里），所以哪个在前由配方决定 ——
+ *    pickMask 只是把每一块单独交出来（11 / 12 是**只**那一块，不含卡框）。
  */
 float pickMask(vec4 m, float sel, vec2 uv) {
     vec2 cu = cardUV(uv);
@@ -225,6 +247,9 @@ float pickMask(vec4 m, float sel, vec2 uv) {
     }
     if (s < 9.5) return max(frame, m.r);
     if (s < 10.5) return max(inner, m.r);
+    // 这两块现算（圆要算距离，别让用不到它们的层白掏这份开销）
+    if (s < 11.5) return rectMask(cu, uRectStar, 0.004);   // 星数 / 阶数带
+    if (s < 12.5) return circleMask(cu, uCircleAttr);      // 属性圆
     return card;
 }
 
@@ -430,7 +455,7 @@ vec4 effect(vec2 uv) {
 
   BODY.maskdebug = `
 // 掩膜调试：把几块工艺区按颜色画出来，用来核对"区域切得对不对"。
-// 红=卡名  绿=卡图  蓝=效果框  灰=卡框  黄=卡图外环
+// 红=卡名  绿=卡图  蓝=效果框  灰=卡框  黄=卡图外环  橙=星数/阶数带  紫=属性圆
 vec4 effect(vec2 uv) {
     vec4 t = cardTex( uv);
     vec4 m = texture(uMask, uv);
@@ -440,11 +465,15 @@ vec4 effect(vec2 uv) {
     float inner = rectMask(cu, uRectArtInner, 0.005);
     float text = rectMask(cu, uRectTextBox, 0.005);
     float ring = rectMask(cu, uRectArtOuter, 0.006) * (1.0 - inner);
+    float star = pickMask(m, 11.0, uv);
+    float attr = pickMask(m, 12.0, uv);
     vec3 c = vec3(0.09);
     c = mix(c, vec3(0.62), frame);
     c = mix(c, vec3(0.25, 1.0, 0.35), inner * 0.75);
     c = mix(c, vec3(0.30, 0.45, 1.0), text * 0.75);
     c = mix(c, vec3(1.0, 0.85, 0.20), ring * 0.85);
+    c = mix(c, vec3(1.0, 0.45, 0.08), star * 0.95);   // 橙 = 星数 / 阶数带
+    c = mix(c, vec3(0.72, 0.35, 1.0), attr * 0.95);   // 紫 = 属性圆
     c = mix(c, vec3(1.0, 0.25, 0.25), m.r);
     return vec4(c, t.a * card);
 }

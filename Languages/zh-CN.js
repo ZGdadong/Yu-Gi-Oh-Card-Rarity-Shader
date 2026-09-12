@@ -9,9 +9,9 @@
  *   app.*  topbar.*  info.*  panel.*  status.*     界面骨架
  *   tier.*                                         五个分节的标题
  *   group.*                                        参数面板的三组
- *   p.<参数名>.label / .hint                        38 个参数
+ *   p.<参数名>.label / .hint                        60 个参数
  *   rarity.<罕贵度 id>.short / .full / .feat / .render   43 条罕贵度
- *   preset.<序号>                                   22 个预设
+ *   preset.<序号>                                   23 个预设
  *   card.<图片名>.name / .sub / .stats               每张卡在侧栏显示的信息
  *
  * 新增一条罕贵度 / 一个参数之后：node tools/gen-lang.mjs --force 会重建这份文件，
@@ -308,7 +308,7 @@
     "p.stampAmount.label": "水印浓度",
     "p.glitterSize.label": "闪粉粗细",
     "p.regionManual.label": "手动区域",
-    "p.regionManual.hint": "打开时下面 12 根滑条生效；关掉就回到每张卡烘焙时自动检测出来的值 —— 那份还停在实测口径，跟现在这版手调默认值不一样，所以只切开关画面就会变",
+    "p.regionManual.hint": "打开时下面那 12 根矩形滑条（卡图窗外框 / 怪物区 / 效果文字区）生效；关掉就回到每张卡烘焙时写进 js/card-textures.js 的值 —— 那份还停在实测口径，跟现在这版手调默认值不一样，所以只切开关画面就会变。**星数/阶数带与属性圆不受这个开关影响**：它们是后加的区域，没有烘焙值（见各自的 hint）",
     "p.artOuterX0.label": "卡图窗外框 · 左",
     "p.artOuterY0.label": "卡图窗外框 · 上",
     "p.artOuterX1.label": "卡图窗外框 · 右",
@@ -322,8 +322,22 @@
     "p.textBoxY0.label": "效果文字区 · 上",
     "p.textBoxX1.label": "效果文字区 · 右",
     "p.textBoxY1.label": "效果文字区 · 下",
+    "p.starX0.label": "星数 / 阶数带 · 左",
+    "p.starX0.hint": "整条带子的左沿。默认 0.0320（≈26px，正好是卡片自己的左沿）—— **超量的阶数星是从最左边开始的**，收窄一点就会把排头那几颗星切掉",
+    "p.starY0.label": "星数 / 阶数带 · 上",
+    "p.starY0.hint": "默认 0.1200（≈142px）。实测星盘上沿：A-to-Z 153px / Blue-Eyes 150px / 超量那张 146px，留了几像素余量",
+    "p.starX1.label": "星数 / 阶数带 · 右",
+    "p.starX1.hint": "整条带子的右沿。默认 0.9350（≈760px）—— 等级星那一行是**右对齐**的（10 颗星到 688px 为止），留出余量免得换卡被切",
+    "p.starY1.label": "星数 / 阶数带 · 下",
+    "p.starY1.hint": "默认 0.1800（≈213px）。实测星盘下沿 192~205px；再往下就压到卡图窗外框了（外框上沿 0.1673）",
+    "p.attrX.label": "属性圆 · 圆心 x",
+    "p.attrX.hint": "名字后面那个属性图标（光/暗/地/水/炎/风/神）的圆心。默认 0.8831（≈718px）—— 三张卡实测都在 716.5~718.8px",
+    "p.attrY.label": "属性圆 · 圆心 y",
+    "p.attrY.hint": "默认 0.0759（≈90px）。实测三张卡：88.8 / 89 / 92.3px",
+    "p.attrR.label": "属性圆 · 半径",
+    "p.attrR.hint": "单位是**卡高 = 1**（和「卡片圆角」同一套口径），默认 0.0320 ≈ 38px —— 正好盖住图标外面那圈金边。圆按卡片的宽高比算，不会被拉成椭圆",
     "p.maskDebug.label": "掩膜图层",
-    "p.maskDebug.hint": "把\"卡名 / 卡图 / 效果框 / 卡框\"四块区域按颜色画出来，核对区域切得对不对",
+    "p.maskDebug.hint": "把七块区域按颜色画出来，核对区域切得对不对 —— 红=卡名 · 绿=卡图 · 蓝=效果框 · 灰=卡框 · 黄=卡图外环 · **橙=星数/阶数带 · 紫=属性圆**",
     "p.sheetOn.label": "一览模式",
     "p.sheetOn.hint": "把全部罕贵度铺成一张对照表（这一屏不看单个卡片的细节）",
     "p.layerOnly.label": "只看第一层",

@@ -80,6 +80,10 @@
     return sh;
   }
 
+  // 属性圆那圈软边（单位同半径，"卡高 = 1"）。约 0.0015 × 1185px ≈ 1.8px ——
+  // 和别处掩膜的羽化（1.5px）一个量级，够抹掉台阶又不至于糊。
+  const ATTR_SOFT = 0.0015;
+
   // 每个工艺用哪个"强度倍率"参数（p0.x 是所有工艺统一的第一号参数：强度）
   const CRAFT_MULT = {
     holo: 'mHolo', parallel: 'mParallel', diagonal: 'mDiagonal', prismatic: 'mPrismatic',
@@ -534,6 +538,8 @@
       this.u4f(prog, 'uRectArtOuter', rr.artOuter);
       this.u4f(prog, 'uRectArtInner', rr.artInner);
       this.u4f(prog, 'uRectTextBox', rr.textBox);
+      this.u4f(prog, 'uRectStar', rr.star);
+      this.u4f(prog, 'uCircleAttr', rr.attr);
       this.u4f(prog, 'uP0', p0);
       this.u4f(prog, 'uP1', p1);
       this.u4f(prog, 'uP2', p2);
@@ -541,10 +547,18 @@
     }
 
     /**
-     * 三块"工艺区域"的矩形（cardUV 坐标 = **整图相对**，x 向右、y 向下，v=0 是上沿）。
+     * 「区域」那七块的几何（cardUV 坐标 = **整图相对**，x 向右、y 向下，v=0 是上沿）。
      *
-     * 默认走侧栏「区域」那组滑条（手调值）；把「手动区域」关掉，就回到烘焙时按每张卡
-     * 自动检测、写进 js/card-textures.js 的那份值。
+     * 卡图窗外框 / 怪物区 / 效果框这三块有**两条路**：默认走侧栏那 12 根滑条（手调值）；
+     * 把「手动区域」关掉，就回到烘焙时按每张卡写进 js/card-textures.js 的那份值。
+     *
+     * **星数 / 阶数带与属性圆只有一条路（滑条值）** —— 它们是后加的区域：
+     *   · 星带：烘焙里确实有一个 starBand 常量，但它是"卡片相对 0.04~0.96 × 0.10~0.152"
+     *     映射过来的，7 张卡之间只差第 4 位小数；而且那份**上下都偏**（实测星盘在
+     *     146~205px，烘焙带在 139~198px，会把星盘下沿切掉 7px），所以干脆不用它
+     *   · 属性圆：烘焙里没有这一块（js/bake.js 的 REGIONS 里没有），它是标准版式上的
+     *     一个圆，7 张卡实测圆心都在 (716.5~718.8, 88.8~92.3)px
+     * 于是这两块**不吃「手动区域」这个开关**，两种模式下都用手调值。
      *
      * 卡名带（nameBand）**不在这里** —— 它的笔画是从图里按暗度抠出来烤进掩膜 R 通道的，
      * 没法用矩形算，所以运行时改不了（也不需要改：顶部卡名实测是对的）。
@@ -555,18 +569,25 @@
       // u4f 是按下标取值的，所以**两条路都得返回数组** ——
       // 烘焙出来的是 {x0,y0,x1,y1} 对象，直接丢给 u4f 会取到 undefined。
       const arr = (r) => [r.x0, r.y0, r.x1, r.y1];
+      // 星带：矩形（整宽的一条带）；属性圆：(圆心 x, 圆心 y, 半径, 软边)
+      const star = [P.starX0, P.starY0, P.starX1, P.starY1];
+      const attr = [P.attrX, P.attrY, P.attrR, ATTR_SOFT];
       if (!P.regionManual) {
         return {
           artOuter: arr(baked.artOuter),
           artInner: arr(baked.artInner),
-          textBox: arr(baked.textBox)
+          textBox: arr(baked.textBox),
+          star: star,
+          attr: attr
         };
       }
       const rect = (k) => [P[k + 'X0'], P[k + 'Y0'], P[k + 'X1'], P[k + 'Y1']];
       return {
         artOuter: rect('artOuter'),
         artInner: rect('artInner'),
-        textBox: rect('textBox')
+        textBox: rect('textBox'),
+        star: star,
+        attr: attr
       };
     }
 

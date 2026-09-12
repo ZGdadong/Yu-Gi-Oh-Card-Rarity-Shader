@@ -139,9 +139,9 @@ const file = `/*
  *   app.*  topbar.*  info.*  panel.*  status.*     界面骨架
  *   tier.*                                         五个分节的标题
  *   group.*                                        参数面板的三组
- *   p.<参数名>.label / .hint                        38 个参数
- *   rarity.<罕贵度 id>.short / .full / .feat / .render   43 条罕贵度
- *   preset.<序号>                                   22 个预设
+ *   p.<参数名>.label / .hint                        ${CFG.SPEC.length} 个参数
+ *   rarity.<罕贵度 id>.short / .full / .feat / .render   ${RAR.LIST.length} 条罕贵度
+ *   preset.<序号>                                   ${CFG.PRESETS.length} 个预设
  *   card.<图片名>.name / .sub / .stats               每张卡在侧栏显示的信息
  *
  * 新增一条罕贵度 / 一个参数之后：node tools/gen-lang.mjs --force 会重建这份文件，

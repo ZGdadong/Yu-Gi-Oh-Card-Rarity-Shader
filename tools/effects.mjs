@@ -162,6 +162,32 @@ const out = await page.evaluate(() => {
     nameTint: { nameTintOn: 1 },
     metalTint: { metalTintOn: 1 }
   };
+
+  /*
+   * 「区域」那组参数的扫描工况。
+   *
+   * 这 20 根滑条一直被判成"没接通"，原因是**工况不对**：几何参数只有在"加工那一块的那一层"
+   * 上才看得出来，而全工艺合成卡片上，后面铺满整卡的膜把前面全盖住了 ——
+   * 拖卡图窗的滑条，画面当然不动。
+   *
+   * 现在给每个区域参数配一个"**只留一层、并且这一层正好加工那块区域**"的工况：
+   *   星数/阶数带 → 遮罩码 11  ·  属性圆 → 12（新加的两块，一并证明它们是通的）
+   *   卡图窗外框 → 7（卡框+卡图外环：这两块都由 uRectArtOuter 现算）
+   *   怪物区（插画）→ 1  ·  效果框 → 4  ·  手动区域开关 → 1
+   * 用的那层是 `holo`（面闪底子，最强也最好认），强度拉满，免得膜太淡判不出来。
+   *
+   * ⚠️ artOuter* 不能配 1（卡图窗）—— 那一块用的是 uRectArtInner，跟外框无关，
+   *    配错了它照样"没接通"（第一版就是这么写的，四个参数全红）。
+   */
+  const REGION_SEL = {
+    regionManual: 1,
+    artOuterX0: 7, artOuterY0: 7, artOuterX1: 7, artOuterY1: 7,
+    artInnerX0: 1, artInnerY0: 1, artInnerX1: 1, artInnerY1: 1,
+    textBoxX0: 4, textBoxY0: 4, textBoxX1: 4, textBoxY1: 4,
+    starX0: 11, starY0: 11, starX1: 11, starY1: 11,
+    attrX: 12, attrY: 12, attrR: 12
+  };
+  let layerOverride = null;      // 非 null 时 grab() 用这一层，而不是合成卡片的那一堆
   const allShaders = [];
   for (const r of RAR.LIST) for (const l of r.layers) if (allShaders.indexOf(l.shader) < 0) allShaders.push(l.shader);
 
@@ -176,7 +202,7 @@ const out = await page.evaluate(() => {
   function grab(craftList, patch) {
     // 换掉合成罕贵度的图层，再渲染
     const arr = craftList && craftList.length ? craftList : allShaders;
-    RAR.BY_ID['__SYN'].layers = arr.map((s) => strongest[s]).filter(Boolean);
+    RAR.BY_ID['__SYN'].layers = layerOverride || arr.map((s) => strongest[s]).filter(Boolean);
     setState(Object.assign({ rarity: synIdx }, VIEW, patch));
     p.resize(640, 900, 1);
     p.renderAtTime(6);
@@ -275,7 +301,14 @@ const out = await page.evaluate(() => {
 
     let candidates;
     const cur = CFG.defaults()[sp.key];
-    if (sp.type === 'check') candidates = [cur ? 0 : 1, cur ? 1 : 0];   // 两个方向都试
+    // card 型参数（下拉框）没有 min/max —— 旧写法会算出 NaN，最后全部落回第 0 张卡，
+    // 于是"换卡图"被判成没接通。这里直接给几个真的不同的卡号。
+    if (sp.type === 'card') {
+      const set = [];
+      for (let i = 0; i < Math.min(cardCount, 4); i++) if (set.indexOf(i) < 0) set.push(i);
+      candidates = set.length > 1 ? set : [cur];
+    }
+    else if (sp.type === 'check') candidates = [cur ? 0 : 1, cur ? 1 : 0];   // 两个方向都试
     else if (sp.type === 'color') candidates = [cur === '#d8e4ff' ? '#ff4444' : '#22ff88'];
     else if (sp.type === 'select') candidates = [(Math.round(cur) + 7) % RAR.ORDER.length];
     else {
@@ -284,6 +317,17 @@ const out = await page.evaluate(() => {
     }
     const craftList = craftsOfParam[sp.key] || PARAM_CRAFT[sp.key] || null;
     const also = PARAM_ALSO[sp.key] || {};
+    // 区域参数：临时把合成卡片收成"只加工那一块"的一层（见上面 REGION_SEL 的说明）
+    const rsel = REGION_SEL[sp.key];
+    if (rsel !== undefined && strongest['holo']) {
+      const b = strongest['holo'];
+      const one = { shader: b.shader, p0: b.p0.slice(), p1: b.p1.slice(), p2: b.p2.slice(), col: b.col.slice() };
+      one.p0[0] = 1.0;      // 强度拉满
+      one.p1[3] = rsel;     // 遮罩选择 = 这块区域
+      layerOverride = [one];
+    } else {
+      layerOverride = null;
+    }
     const base = grab(craftList, Object.assign({ [sp.key]: cur }, also));
 
     let best = null, bestVal = null;

@@ -228,7 +228,7 @@ const table = await page.evaluate(() => {
       used[l.shader] = (used[l.shader] || 0) + 1;
       if (!S.EFFECTS[l.shader]) missing.push(r.id + '→' + l.shader);
       if (l.p0[0] <= 0) badSel.push(r.id + '→' + l.shader + '(强度0)');
-      if (l.p1[3] < 0 || l.p1[3] > 10.5) badSel.push(r.id + '→' + l.shader + '(遮罩码越界)');
+      if (l.p1[3] < 0 || l.p1[3] > 12.5) badSel.push(r.id + '→' + l.shader + '(遮罩码越界)');
     }
   }
   const craftUnused = S.CRAFT.filter((s) => !used[s]);
@@ -243,7 +243,7 @@ check('罕贵度 id 唯一', table.dupes.length === 0, table.dupes.join(',') || 
 check('LIST 与 ORDER 长度一致', table.n === table.order, `${table.n} / ${table.order}`);
 check('每个图层引用的着色器都存在', table.missing.length === 0, table.missing.join(',') || '全部命中');
 check('每条罕贵度都有"怎么做的"说明', table.noDoc.length === 0, table.noDoc.join(',') || `${table.n} 条都有`);
-check('图层参数合理（强度 > 0、遮罩码在 0..10）', table.badSel.length === 0, table.badSel.join(',') || 'OK');
+check('图层参数合理（强度 > 0、遮罩码在 0..12）', table.badSel.length === 0, table.badSel.join(',') || 'OK');
 check('每个工艺着色器都被至少一个罕贵度用到', table.craftUnused.length === 0,
   table.craftUnused.length ? table.craftUnused.join(',') : `${table.craft.length} 个工艺全部用上`);
 check('着色器清单齐备（工艺 17 + 基础 4）',

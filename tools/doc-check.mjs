@@ -43,8 +43,8 @@ check('21 个片段着色器', Object.keys(SH.EFFECTS).length === 21 && doc.inde
 check('2 个加法混合的工艺', SH.ADDITIVE.length === 2 &&
   SH.ADDITIVE.every((s) => doc.indexOf('`' + s + '`') >= 0), SH.ADDITIVE.join(' '));
 
-check('43 条罕贵度', RAR.LIST.length === 43 && doc.indexOf('43 条罕贵度') >= 0, `${RAR.LIST.length} 条`);
-check('53 个参数', CFG.SPEC.length === 53 && doc.indexOf('53 个参数') >= 0, `${CFG.SPEC.length} 个`);
+check('43 条罕贵度', RAR.LIST.length === 43 && doc.indexOf(RAR.LIST.length + ' 条罕贵度') >= 0, `${RAR.LIST.length} 条`);
+check('60 个参数', CFG.SPEC.length === 60 && doc.indexOf(CFG.SPEC.length + ' 个参数') >= 0, `${CFG.SPEC.length} 个`);
 check('23 个预设', CFG.PRESETS.length === 23, `${CFG.PRESETS.length} 个`);
 
 const tierCount = RAR.LIST.reduce((a, r) => { a[r.tier] = (a[r.tier] || 0) + 1; return a; }, {});
@@ -104,14 +104,14 @@ const shaderSrc = SH.BODY.holo;                   // 任何一个工艺正文里
 const prelude = SH.PRELUDE;
 const pickBody = prelude.slice(prelude.indexOf('float pickMask('), prelude.indexOf('/*', prelude.indexOf('float pickMask(')));
 const branches = (pickBody.match(/if \(s < /g) || []).length;
-check('pickMask 的 0..10 分支齐全（11 个）', branches === 11, `${branches} 个分支`);
-// §4 那张表的每一格里出现的数字，0..10 应该一个不少
+check('pickMask 的 0..12 分支齐全（13 个）', branches === 13, `${branches} 个分支`);
+// §4 那张表的每一格里出现的数字，0..12 应该一个不少
 const ptableSrc = doc.slice(doc.indexOf('### 遮罩选择码'), doc.indexOf('### 强度是怎么算的'));
 const codesInDoc = (ptableSrc.match(/(?:^\||\|)\s*(\d+)\s*\|/gm) || [])
   .map((s) => parseInt(s.replace(/\|/g, '').trim(), 10));
 const missingCodes = [];
-for (let i = 0; i <= 10; i++) if (codesInDoc.indexOf(i) < 0) missingCodes.push(i);
-check('§4 的遮罩选择码表里 0..10 都能查到', missingCodes.length === 0,
+for (let i = 0; i <= 12; i++) if (codesInDoc.indexOf(i) < 0) missingCodes.push(i);
+check('§4 的遮罩选择码表里 0..12 都能查到', missingCodes.length === 0,
   missingCodes.length ? '缺 ' + missingCodes.join(',') : codesInDoc.join(' '));
 
 // ------------------------------------------------------------ 自动生成的表 ----

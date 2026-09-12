@@ -14,8 +14,8 @@
  *
  * ── 遮罩选择码（见 js/shaders.js 的 pickMask）──────────────────────────
  *   0 全卡面  1 卡图  2 卡框  3 卡名  4 效果框  5 卡图+卡框
- *   6 金属区（卡框+卡名+卡图外环）  7 卡框+卡图外环
- *   8 效果框里的字  9 卡框+卡名  10 卡图+卡名
+ *   6 金属区（卡框+卡名+卡图外环）  7 卡框+卡图外环  8 效果框里的字
+ *   9 卡框+卡名  10 卡图+卡名  11 星数 / 阶数带  12 属性圆（名字后面那个圆）
  */
 
 (function (global) {
@@ -23,7 +23,8 @@
 
   const SEL = {
     ALL: 0, ART: 1, FRAME: 2, NAME: 3, TEXT: 4, ART_FRAME: 5,
-    METAL: 6, FRAME_RING: 7, TEXT_INK: 8, FRAME_NAME: 9, ART_NAME: 10
+    METAL: 6, FRAME_RING: 7, TEXT_INK: 8, FRAME_NAME: 9, ART_NAME: 10,
+    STAR: 11, ATTR: 12
   };
 
   const C = {
