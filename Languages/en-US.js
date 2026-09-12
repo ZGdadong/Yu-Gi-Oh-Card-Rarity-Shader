@@ -340,6 +340,8 @@
     "p.attrR.hint": "The unit is **card height = 1** (same convention as the card corner radius); default 0.0320 ≈ 38px, which just covers the gold ring around the icon. The circle is computed against the card's aspect ratio, so it never turns into an ellipse",
     "p.maskDebug.label": "Mask layers",
     "p.maskDebug.hint": "Paints the seven regions in flat colours, so you can check whether they are cut out correctly — red = card name · green = artwork · blue = effect text box · grey = card frame · yellow = artwork ring · **orange = level/rank band · purple = attribute circle**",
+    "p.demoRegion.label": "Region demo (treat that patch only)",
+    "p.demoRegion.hint": "0 = off · 1 = **only the level / rank band** · 2 = **only the attribute circle**. No rarity uses these two regions (on a real card the stars and the attribute icon are treated together with the frame), so on their own they are invisible — this slider lays one more film **over that patch only** on top of the recipe (js/pipeline.js `demoLayer`), so the star row / attribute icon lights up by itself. Clearest with Normal N (see the ★ presets)",
     "p.sheetOn.label": "Sheet mode",
     "p.sheetOn.hint": "Lays every rarity out as one comparison sheet (this screen is not about the detail of a single card)",
     "p.layerOnly.label": "First layer only",
@@ -365,10 +367,12 @@
     "preset.16": "⑯ Mosaic",
     "preset.17": "⑰ Shatterfoil",
     "preset.18": "★ Mask debug",
-    "preset.22": "★★ Bare card face (untreated)",
-    "preset.19": "★ Region: back to baked values",
-    "preset.20": "★ Pattern atlas",
-    "preset.21": "★★ All rarities sheet",
+    "preset.19": "★ Only the level / rank band",
+    "preset.20": "★ Only the attribute circle",
+    "preset.21": "★ Region: back to baked values",
+    "preset.22": "★ Pattern atlas",
+    "preset.23": "★★ All rarities sheet",
+    "preset.24": "★★ Bare card face (untreated)",
     }
   };
 })(window);

@@ -84,6 +84,34 @@
   // 和别处掩膜的羽化（1.5px）一个量级，够抹掉台阶又不至于糊。
   const ATTR_SOFT = 0.0015;
 
+  /*
+   * 「区域演示」那一层：一块只加工**星数 / 阶数带**（遮罩码 11）或**属性圆**（12）的闪膜。
+   *
+   * ── 为什么要有它 ────────────────────────────────────────────────────────
+   * 这两块区域是后加的，而**没有任何一条罕贵度用它们**：实卡上星位与属性图标本来
+   * 就跟着卡框一起被加工（卡框的遮罩已经把这两处盖住了），配方里没有"单独加工它们"
+   * 的理由。可这样一来，"这两块区域到底有没有用、切得准不准"在画面上就完全看不出来
+   * —— 只能靠掩膜调试层看两个色块。所以给一根**调试滑条**（面板「调试」组）：
+   * 把选中罕贵度的层叠完之后，再压一层只盖那一块的膜，星位 / 属性图标自己单独闪起来，
+   * "它确实是一块独立的区域"一眼可见。两个预设（★ 只加工星数/阶数带 / ★ 只加工属性圆）
+   * 也走这里，配的是平卡 N，所以画面上就只剩这一层。
+   *
+   * 用的是 holo（面闪底子）：**暗部增强压到 0**（`uP1.z = 0` → 不分明暗、整块一视同仁地
+   * 上膜；默认那 0.55 会让亮底色的属性图标几乎不显色）、细颗粒 0.8 ——
+   * 深色卡框与亮色图标上都看得出来。
+   */
+  function demoLayer(v) {
+    const sel = Math.round(v);
+    if (sel !== 1 && sel !== 2) return null;
+    return {
+      shader: 'holo',
+      p0: [2.0, 3.2, 3.0, 0.55],
+      p1: [0.0, 1.35, 0.0, sel === 1 ? 11 : 12],
+      p2: [0.08, 0.8, 0, 0],
+      col: [1, 1, 1]
+    };
+  }
+
   // 每个工艺用哪个"强度倍率"参数（p0.x 是所有工艺统一的第一号参数：强度）
   const CRAFT_MULT = {
     holo: 'mHolo', parallel: 'mParallel', diagonal: 'mDiagonal', prismatic: 'mPrismatic',
@@ -748,6 +776,13 @@
             this.setLayerUniforms(prog, layer, seed);
           }, additive);
         }
+        // ---- ⑦ 区域演示层（调试用，压在配方的最后一层上面）----
+        const demo = demoLayer(P.demoRegion);
+        if (demo) {
+          this.pass(demo.shader, cx, cy, tiltX, tiltY, (prog) => {
+            this.setLayerUniforms(prog, demo, seed);
+          });
+        }
       }
     }
 
@@ -951,6 +986,7 @@
       }
       let n = 2;                                  // base + 一层
       n += P.layerOnly ? Math.min(1, this.currentRarityInfo().layers.length) : this.currentRarityInfo().layers.length;
+      if (!P.maskDebug && demoLayer(P.demoRegion)) n++;      // 区域演示层
       if (P.shadowOn) n++;
       if (P.bgOn) n++;
       return n;
@@ -964,6 +1000,8 @@
       if (!P.maskDebug) {
         const layers = P.layerOnly ? this.currentRarityInfo().layers.slice(0, 1) : this.currentRarityInfo().layers;
         for (const l of layers) out.push(l.shader);
+        const demo = demoLayer(P.demoRegion);
+        if (demo) out.push(demo.shader);
       }
       return out;
     }

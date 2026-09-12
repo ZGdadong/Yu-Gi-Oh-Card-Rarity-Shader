@@ -456,10 +456,19 @@
   ];
 
   // ---- 解析 like：把 like 指向的图层抄过来（保持"只有一份定义"）----------
+  //
+  // ⚠️ 判空要写 `== null`（null 与 undefined 都算），**不能只判 `=== null`** ——
+  //    DT 那 6 条压根没写 `layers` 这个键（undefined），而这条分支后面紧跟着
+  //    "`layers === undefined` 就填成 []"，于是它们统统变成"一个图层都没有"，
+  //    渲染出来跟平卡 N 一模一样。文档里写的"DT 用 like 指过去、图层只有一份定义"
+  //    就成了空话（实测：DT-PR 与 PR 的逐像素差 42.4，与 N 差 0.000 ——
+  //    见 tools/.cache/probe-dt-like.mjs，是那时候抓出来的）。
+  //    注意 KC / NR / N 这种**自己写了 `layers: []`** 的是另一回事：那是"故意什么都不加"，
+  //    `[]` 不是 null / undefined，不会被这里覆盖（NR 就靠这一条保持和平卡一致）。
   const BY_ID = {};
   for (const r of LIST) BY_ID[r.id] = r;
   for (const r of LIST) {
-    if (r.layers === null) {
+    if (r.layers == null) {
       if (!r.like) throw new Error('罕见度 ' + r.id + ' 既没有 layers 也没有 like');
       const src = BY_ID[r.like];
       r.layers = src.layers.map((l) => ({

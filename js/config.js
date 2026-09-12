@@ -125,6 +125,8 @@
 
     // ---- ⑤ 调试 ----
     { key: 'maskDebug', group: '调试', label: '掩膜图层', type: 'check', def: 0, hint: '把七块区域按颜色画出来，核对区域切得对不对 —— 红=卡名 · 绿=卡图 · 蓝=效果框 · 灰=卡框 · 黄=卡图外环 · **橙=星数/阶数带 · 紫=属性圆**' },
+    { key: 'demoRegion', group: '调试', label: '区域演示（只加工那一块）', type: 'range', min: 0, max: 2, step: 1, def: 0,
+      hint: '0 = 关 · 1 = **只加工星数 / 阶数带** · 2 = **只加工属性圆**。这两块区域没有任何一条罕贵度用到（实卡上星位与属性图标本来就跟着卡框一起加工），所以光看配方是看不出来的 —— 这根滑条在配方之上再压一层**只盖那一块**的闪膜（`js/pipeline.js` 的 `demoLayer`），选中后星位 / 属性图标自己单独闪起来。配平卡 N 看最干净（就是预设里那两条 ★）' },
     { key: 'sheetOn', group: '调试', label: '一览模式', type: 'check', def: 0, hint: '把全部罕贵度铺成一张对照表（这一屏不看单个卡片的细节）' },
     { key: 'layerOnly', group: '调试', label: '只看第一层', type: 'check', def: 0, hint: '只画配方的第一层，其余层跳过 —— 用来单独看某个工艺' },
     { key: 'stampCells', group: '调试', label: '显示图案图集', type: 'check', def: 0, hint: '把 js/stamps.js 现画的 KC / 20th / 25th / 象形字图集贴到屏幕上' }
@@ -250,6 +252,8 @@
     { name: '⑯ 马赛克 Mosaic', patch: { rarity: R('MOSAIC'), cardSize: 0.86 } },
     { name: '⑰ 碎箔 Shatterfoil', patch: { rarity: R('SHATTERFOIL'), cardSize: 0.86 } },
     { name: '★ 掩膜调试', patch: { rarity: R('SR'), maskDebug: 1, cardSize: 0.95 } },
+    { name: '★ 只加工星数 / 阶数带', patch: { rarity: R('N'), demoRegion: 1, cardSize: 0.95 } },
+    { name: '★ 只加工属性圆', patch: { rarity: R('N'), demoRegion: 2, cardSize: 0.95 } },
     { name: '★ 区域：回到烘焙值', patch: { regionManual: 0 } },
     { name: '★ 图案图集', patch: { rarity: R('N'), stampCells: 1 } },
     { name: '★★ 一览全部罕贵度', patch: { rarity: R('SR'), sheetOn: 1 } },

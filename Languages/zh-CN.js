@@ -9,9 +9,9 @@
  *   app.*  topbar.*  info.*  panel.*  status.*     界面骨架
  *   tier.*                                         五个分节的标题
  *   group.*                                        参数面板的三组
- *   p.<参数名>.label / .hint                        60 个参数
+ *   p.<参数名>.label / .hint                        61 个参数
  *   rarity.<罕贵度 id>.short / .full / .feat / .render   43 条罕贵度
- *   preset.<序号>                                   23 个预设
+ *   preset.<序号>                                   25 个预设
  *   card.<图片名>.name / .sub / .stats               每张卡在侧栏显示的信息
  *
  * 新增一条罕贵度 / 一个参数之后：node tools/gen-lang.mjs --force 会重建这份文件，
@@ -338,6 +338,8 @@
     "p.attrR.hint": "单位是**卡高 = 1**（和「卡片圆角」同一套口径），默认 0.0320 ≈ 38px —— 正好盖住图标外面那圈金边。圆按卡片的宽高比算，不会被拉成椭圆",
     "p.maskDebug.label": "掩膜图层",
     "p.maskDebug.hint": "把七块区域按颜色画出来，核对区域切得对不对 —— 红=卡名 · 绿=卡图 · 蓝=效果框 · 灰=卡框 · 黄=卡图外环 · **橙=星数/阶数带 · 紫=属性圆**",
+    "p.demoRegion.label": "区域演示（只加工那一块）",
+    "p.demoRegion.hint": "0 = 关 · 1 = **只加工星数 / 阶数带** · 2 = **只加工属性圆**。这两块区域没有任何一条罕贵度用到（实卡上星位与属性图标本来就跟着卡框一起加工），所以光看配方是看不出来的 —— 这根滑条在配方之上再压一层**只盖那一块**的闪膜（`js/pipeline.js` 的 `demoLayer`），选中后星位 / 属性图标自己单独闪起来。配平卡 N 看最干净（就是预设里那两条 ★）",
     "p.sheetOn.label": "一览模式",
     "p.sheetOn.hint": "把全部罕贵度铺成一张对照表（这一屏不看单个卡片的细节）",
     "p.layerOnly.label": "只看第一层",
@@ -363,10 +365,12 @@
     "preset.16": "⑯ 马赛克 Mosaic",
     "preset.17": "⑰ 碎箔 Shatterfoil",
     "preset.18": "★ 掩膜调试",
-    "preset.19": "★ 区域：回到烘焙值",
-    "preset.20": "★ 图案图集",
-    "preset.21": "★★ 一览全部罕贵度",
-    "preset.22": "★★ 纯卡面（不加工）"
+    "preset.19": "★ 只加工星数 / 阶数带",
+    "preset.20": "★ 只加工属性圆",
+    "preset.21": "★ 区域：回到烘焙值",
+    "preset.22": "★ 图案图集",
+    "preset.23": "★★ 一览全部罕贵度",
+    "preset.24": "★★ 纯卡面（不加工）"
     }
   };
 })(window);

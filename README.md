@@ -49,10 +49,10 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | 说明条 | 当前罕贵度的**文档原话**（特征）与**怎么做的**（对应哪几个着色器） |
 | <kbd>空格</kbd> / 「⏸ 暂停」 | 暂停 / 继续（暂停时改参数立刻重绘） |
 | <kbd>R</kbd> / 「↻ 重置」 | 时钟归零 |
-| <kbd>P</kbd> / 「⚙ 参数」 | 参数面板（60 个参数 / 4 组：观看 / 工艺 / 区域 / 调试） |
+| <kbd>P</kbd> / 「⚙ 参数」 | 参数面板（61 个参数 / 4 组：观看 / 工艺 / 区域 / 调试） |
 | <kbd>M</kbd> | 掩膜调试图层 |
-| 预设 | **23 个**：默认 / 各单个罕贵度 / ★掩膜调试 / ★区域回到烘焙值 / ★图案图集 / ★★一览全部罕贵度 / ★★纯卡面 |
-| 「🔗 复制链接」 | 把当前 60 个参数写进地址栏 hash 并复制 |
+| 预设 | **25 个**：默认 / 各单个罕贵度 / ★掩膜调试 / ★只加工星数·阶数带 / ★只加工属性圆 / ★区域回到烘焙值 / ★图案图集 / ★★一览全部罕贵度 / ★★纯卡面 |
+| 「🔗 复制链接」 | 把当前 61 个参数写进地址栏 hash 并复制 |
 | 右上角「语言」 | 中文 / English / 日本語 即时切换，选择记在 localStorage 里；「⟳」重新扫描 `Languages/` 下新丢进来的语言包 |
 | 说明条右上「▾」 | 收起 / 展开说明条（收起状态也会记住） |
 | 面板最上面「卡图」 | 换一张已经烤好的卡（有几张列几张） |
@@ -180,7 +180,7 @@ uView = f(tilt.x, tilt.y)       ← 同样这两个角度驱动闪膜的衍射�
 ```powershell
 cd "E:\ZG\Documents\DeepSeekHarness\P5.js\Art\Yu-Gi-Oh Card Rarity"
 node tools/verify.mjs        # 63 项自检
-node tools/effects.mjs       # 43 个罕贵度 + 17 个工艺 + 60 个参数 + 23 个预设实测
+node tools/effects.mjs       # 43 个罕贵度 + 17 个工艺 + 61 个参数 + 25 个预设实测
 node tools/doc-check.mjs     # 核对两份文档里可机器判定的说法（56 项）
 node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 ```
@@ -250,7 +250,7 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
   PASS  两种方向确实是不一样的两幅画面（不是符号写反了却互相抵消）  —— 右边界 541 vs 560（差 19px）
 
 -- J. hash 编解码 --
-  PASS  hash 编解码往返一致  —— 60 个参数 → 235 字符
+  PASS  hash 编解码往返一致  —— 61 个参数 → 237 字符
   PASS  非法/越界输入被丢弃或夹紧
 
 -- K. 卡片外沿自动识别（合成用例） --
@@ -275,7 +275,7 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 
 -- M. 多语言 --
   PASS  清单里的每个语言包都加载成功  —— zh-CN✓ en-US✓ ja-JP✓
-  PASS  每个语言包的键集合与 zh-CN 完全一致  —— zh-CN 343 键 · en-US 343 键 · ja-JP 343 键
+  PASS  每个语言包的键集合与 zh-CN 完全一致  —— zh-CN 347 键 · en-US 347 键 · ja-JP 347 键
   PASS  切换语言后界面文案真的变了（标题 / 罕贵度名 / 分节 / 参数组 / 预设）  —— zh-CN: 平卡 / 观看 · en-US: Normal / View · ja-JP: ノーマル / 表示
   PASS  缺键回退到 zh-CN（不是显示裸键）  —— 中文兜底
   PASS  所有语言都没有的键才回退成键名本身  —— __definitely_missing__
@@ -318,8 +318,9 @@ RESULT: PASS  （63 项）
   artOuter* 2.86~19.91 · artInner* 3.91~19.56 · textBox* 0.65~34.54 · regionManual 0.57
   starX0 0.10 · starY0 6.19 · starX1 2.90 · starY1 2.90        ← 星数 / 阶数带（遮罩码 11）
   attrX 0.27 · attrY 0.27 · attrR 0.16                          ← 属性圆（遮罩码 12）
+  demoRegion 2.05                                               ← 区域演示层
 
-RESULT: 43 个罕贵度 · 17 个工艺 · 60 个参数 · 23 个预设全部检查过（参数 60/60 接通）
+RESULT: 43 个罕贵度 · 17 个工艺 · 61 个参数 · 25 个预设全部检查过（参数 61/61 接通）
 ```
 
 > 判定"某参数是否接通"用的是**卡片区与全屏两个区域的逐像素差**，认可三种情形：
@@ -424,7 +425,7 @@ Yu-Gi-Oh Card Rarity/
 │   ├── stamps.js                图案图集：运行时用 canvas 2D 画 KC / 20th / 25th / 象形字
 │   ├── shaders.js               17 个工艺 + 4 个基础件 + 3D 倾斜顶点着色器
 │   ├── rarities.js              43 条罕贵度 → 着色器配方
-│   ├── config.js                60 个参数 + 23 个预设 + hash 编解码
+│   ├── config.js                61 个参数 + 25 个预设 + hash 编解码
 │   ├── pipeline.js              多 pass 管线、3D 倾斜、一览模式、取像接口
 │   └── ui.js                    罕贵度列表 / 说明条 / 参数面板 / 语言下拉 / hash 同步
 ├── docs/

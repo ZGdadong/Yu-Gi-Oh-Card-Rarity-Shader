@@ -44,8 +44,8 @@ check('2 个加法混合的工艺', SH.ADDITIVE.length === 2 &&
   SH.ADDITIVE.every((s) => doc.indexOf('`' + s + '`') >= 0), SH.ADDITIVE.join(' '));
 
 check('43 条罕贵度', RAR.LIST.length === 43 && doc.indexOf(RAR.LIST.length + ' 条罕贵度') >= 0, `${RAR.LIST.length} 条`);
-check('60 个参数', CFG.SPEC.length === 60 && doc.indexOf(CFG.SPEC.length + ' 个参数') >= 0, `${CFG.SPEC.length} 个`);
-check('23 个预设', CFG.PRESETS.length === 23, `${CFG.PRESETS.length} 个`);
+check('61 个参数', CFG.SPEC.length === 61 && doc.indexOf(CFG.SPEC.length + ' 个参数') >= 0, `${CFG.SPEC.length} 个`);
+check('23 个预设', CFG.PRESETS.length === 25, `${CFG.PRESETS.length} 个`);
 
 const tierCount = RAR.LIST.reduce((a, r) => { a[r.tier] = (a[r.tier] || 0) + 1; return a; }, {});
 check('分节数量：基础 12 / 高级 10 / 平行 10 / DT 6 / 其他 5',
