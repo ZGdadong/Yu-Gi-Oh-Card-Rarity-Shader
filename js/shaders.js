@@ -155,6 +155,20 @@ vec2 isoUV(vec2 cu) { return vec2(cu.x * uAspect, cu.y); }
 // 正方形网格：size 是"格子边长占卡高的比例"
 vec2 squareGrid(vec2 cu, float size) { return vec2(cu.x / uAspect, cu.y) / size; }
 
+/*
+ * 同上，但**格子真的是方的**。
+ *
+ * ⚠️ squareGrid 名字叫"正方形"，实现却是「cu.x / uAspect」—— 除以长宽比等于
+ *    把 x 又压扁一次（和正上方的 isoUV 正好相反，那边是**乘**）。结果格子是
+ *    1 : 2.17 的瘦高条，贴上去的图案被横向压扁（千年闪的"图案宽度被压缩"就是它）。
+ *    正确的写法是 isoUV 之后再除：单位长度在横竖两个方向一样长。
+ *
+ * 没有直接改 squareGrid，是因为它还被 kc / 星箔 / 马赛克 / 碎箔 / 20th 水印
+ * 用着（第 441/467/490/526/584/679 行），格宽会一起变成 1.49 倍、那几个的观感
+ * 都得重调。要动的话得一个一个看，所以先只在千年闪这边用新的。
+ */
+vec2 isoGrid(vec2 cu, float size) { return isoUV(cu) / size; }
+
 // 软边矩形掩膜（卡片相对坐标）。soft 是羽化半宽，单位也是卡片相对坐标。
 float rectMask(vec2 cu, vec4 r, float soft) {
     float mx = smoothstep(r.x - soft, r.x + soft, cu.x)
@@ -596,34 +610,66 @@ vec4 effect(vec2 uv) {
 // 千年闪（Millennium Rare）。实卡是"埃及文字图案"的闪膜。
 //   这里用图集下排那 4 个象形字（安卡 / 荷鲁斯之眼 / 王名圈 / 水波鸟）按格随机拼，
 //   是**风格化近似**，不是真·圣书体字形（见 README 的"已知取舍"）。
-//   uP0 = (强度, 线密度, 字形强度, 字形密度)
+//   uP0 = (强度, 竖线半宽, 字形强度, 字形密度)
 //   uP1 = (视角增益, 保留, 保留, 遮罩选择)
+//
+// ── 三层箔，三个相位：底子 / 象形字 / 竖线 ───────────────────────────────
+//   三者各走各的衍射相位，所以转动卡片时它们的颜色**各自流动**、彼此错开。
+//   以前字和格线都是「spec += 一个固定色」（0.90,0.86,0.70 / 0.58,0.54,0.42），
+//   不管怎么转都是白的或暖灰的 —— 和当初"千年图案没有彩色折射"是同一个毛病。
+//
+// ── 格子按像素等比（这是"图案宽度被压缩"的根）──────────────────────────
+//   用 isoGrid 而不是 squareGrid：后者是「cu.x / uAspect」，除以长宽比等于把 x
+//   又压扁一次，格子实际是 1 : 2.17 的瘦高条，贴上去的字被横向压扁。
+//  （见文件上方 isoGrid 的注释）
+//
+// ── 竖线只长在字与字之间 ─────────────────────────────────────────────────
+//   横向格线已去掉 —— 那条"线光栅"的基因本来是从 kc 闪抄来的，实卡的千年图案
+//   没有满卡线栅。现在只剩竖线，以**格边为中心**：d = 到格边的距离，越小越亮。
 vec4 effect(vec2 uv) {
     vec4 tex = cardTex( uv);
     vec4 m = texture(uMask, uv);
     float region = pickMask(m, uP1.w, uv);
     if (region < 0.004) return vec4(tex.rgb, 0.0);
 
-    vec2 spy = isoUV(cardUV(uv));
-    float line = 0.5 + 0.5 * sin(spy.x * uP0.y * TAU);
+    vec2 cu = cardUV(uv);
+    vec2 spy = isoUV(cu);
 
     float ph = (spy.x * 0.5 + spy.y * 0.3) + uView.x * uP1.x
              + uView.y * uP1.x * 0.5 + uTime * 0.035;
-    vec3 spec = spectrum(ph, 1.3) * (0.45 + 0.8 * line);
 
     // 象形字：一格一个字，四种字形按格随机挑
-    vec2 g = squareGrid(cardUV(uv), uP0.w);
+    vec2 g = isoGrid(cu, uP0.w);
     vec2 id = floor(g);
     vec2 f = fract(g);
-    // 随机镜像，否则一眼就能看出来是一格一格的重复
+    // 随机镜像，否则一眼就能看出来是一格一格的重复。
+    // 注意是绕 0.5 镜像的，abs(f-0.5) 不变 —— 所以下面的竖线永远贴着格子边，
+    // 不会因为镜像跑到字中间去。
     if (hash21(id + 11.3) > 0.5) f.x = 1.0 - f.x;
     if (hash21(id + 23.7) > 0.5) f.y = 1.0 - f.y;
     float pick = floor(hash21(id + uSeed) * 4.0);
-    vec2 cellIdx = vec2(pick, 1.0);
-    float glyph = stampAt(cellIdx, f);
-    // 字形之间用细线串起来，像"文字带"
-    float rule = smoothstep(0.10, 0.0, abs(f.y - 0.5) - 0.42);
-    spec += vec3(0.90, 0.86, 0.70) * (glyph + rule * 0.35) * uP0.z * (0.6 + 0.5 * line);
+    float glyph = stampAt(vec2(pick, 1.0), f);
+
+    // ---- 竖线：以格边为中心的一条带（只要左右，不要上下）----
+    float w = clamp(uP0.y, 0.004, 0.30);        // 半宽，占格子宽的比例
+    float d = 0.5 - abs(f.x - 0.5);             // 到格边的距离：0 = 正在格边上
+    float rule = smoothstep(w, w * 0.35, d) * (1.0 - clamp(glyph, 0.0, 1.0));
+
+    // 三层箔：底子 → 字 → 竖线，相位依次错开（0 / +0.30 / +0.62）
+    float gph = ph + 0.30 + (hash21(id + 41.7) - 0.5) * 0.26;
+    float lph = ph + 0.62;
+
+    vec3 spec = spectrum(ph, 1.3);
+    // 字内**替换**底子的色（不是叠一层白），边缘靠 stamp 自带的软过渡混
+    spec = mix(spec, spectrum(gph, 1.05), clamp(glyph * uP0.z, 0.0, 1.0));
+    // 竖线自己那一层箔 —— 但**不用 spectrum()**。
+    //   spectrum() 是"白 ↔ 彩色"来回摆的（sin 低的时候回到纯白），面积大的层白一下
+    //   没关系，线只有 8px 宽，一白整条就看不见颜色了：实测 5 个视角里有两三个
+    //   线的彩度只有 27~35，看着就是一根灰条。
+    //   所以这里直接取**色相**、饱和度给个下限，只让色相跟着角度走 ——
+    //   任何角度都是有色的，而且颜色随视角流动。
+    vec3 lspec = hsv2rgb(vec3(fract(lph * 0.62 + 0.05), 0.58, 1.0));
+    spec = mix(spec, lspec, clamp(rule * uP0.z, 0.0, 1.0));
 
     vec3 col = overlaySpec(tex.rgb, spec, 0.30);
     return vec4(col, tex.a * cover(region, uP0.x));

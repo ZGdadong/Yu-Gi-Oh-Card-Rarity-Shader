@@ -189,7 +189,7 @@
     "rarity.MILLENNIUM.short": "Millennium",
     "rarity.MILLENNIUM.full": "Millennium Rare",
     "rarity.MILLENNIUM.feat": "An Egyptian hieroglyph pattern film; variants include NMR, SMR, UMR, SEMR and GMR",
-    "rarity.MILLENNIUM.render": "A line grating + \"text bands\" assembled from **Egyptian hieroglyphs** picked at random per cell (the glyphs are stylised approximations, see the README). NMR/SMR/UMR/SEMR/GMR are the same finish over different bases.",
+    "rarity.MILLENNIUM.render": "\"Text bands\" assembled from **Egyptian hieroglyphs** picked at random per cell: a single vertical rule sits between neighbouring glyphs, and both the glyphs and that rule are their own foil layers that shift colour with the viewing angle (the glyphs are stylised approximations, see the README). NMR/SMR/UMR/SEMR/GMR are the same finish over different bases.",
     "rarity.STARFOIL.short": "Starfoil",
     "rarity.STARFOIL.full": "Starfoil Rare",
     "rarity.STARFOIL.feat": "TCG: a star-shaped film",

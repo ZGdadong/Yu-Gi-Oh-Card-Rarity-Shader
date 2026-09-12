@@ -187,7 +187,7 @@
     "rarity.MILLENNIUM.short": "ミレニアムレア",
     "rarity.MILLENNIUM.full": "Millennium Rare",
     "rarity.MILLENNIUM.feat": "エジプト文字のパターン膜。NMR、SMR、UMR、SEMR、GMR などの派生あり",
-    "rarity.MILLENNIUM.render": "ライン回折格子 ＋ **エジプト象形文字**を格子ごとにランダムに組み合わせた「文字帯」（象形文字は様式化した近似です。README を参照）。NMR/SMR/UMR/SEMR/GMR は同じ加工の下地違いです。",
+    "rarity.MILLENNIUM.render": "**エジプト象形文字**を格子ごとにランダムに組み合わせた「文字帯」。隣り合う文字の間に縦線が 1 本入り、文字とその縦線はそれぞれ別の箔レイヤーとして視角に応じて色が変わります（象形文字は様式化した近似です。README を参照）。NMR/SMR/UMR/SEMR/GMR は同じ加工の下地違いです。",
     "rarity.STARFOIL.short": "スターフォイルレア",
     "rarity.STARFOIL.full": "Starfoil Rare",
     "rarity.STARFOIL.feat": "TCG。星形の膜",

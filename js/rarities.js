@@ -123,8 +123,11 @@
   const kc = (str) => L('kc',
     [str, 78, 2.0, 0.75], [1.30, 1.0, 0.30, SEL.ALL], [0, 0, 0, 0], C.white);
 
+  // 千年闪 / 法老闪的埃及文字图案膜。p0=(强度, **竖线半宽**, 字形强度, 字形密度)
+  //   竖线半宽：0.055 ≈ 格子宽的 5.5%，整条线 11%（格子宽约 167px → 线约 18px）
+  //   字形密度：0.138 = 原来 0.115 的 1.2 倍 —— 字与字的间隔拉开 1.2 倍
   const millennium = (str) => L('millennium',
-    [str, 70, 0.85, 0.115], [1.10, 0, 0, SEL.ALL], [0, 0, 0, 0], C.goldLight);
+    [str, 0.055, 0.85, 0.138], [1.10, 0, 0, SEL.ALL], [0, 0, 0, 0], C.goldLight);
 
   // 周年水印。uP1=(图集格 x,y,·,·)
   const stamp20 = (str, sel) => L('stamp',
@@ -330,7 +333,8 @@
     {
       id: 'MILLENNIUM', code: 'Millennium Rare', cn: '千年闪', en: 'Millennium Rare', tier: 'parallel',
       feat: '埃及文字图案闪膜；有 NMR、SMR、UMR、SEMR、GMR 等变体',
-      render: '线光栅 + **埃及象形字**按格随机拼成的"文字带"（象形字是风格化近似，见 README）。' +
+      render: '**埃及象形字**按格随机拼成的"文字带"：字与字之间一道竖线，' +
+        '字面和竖线各是**另一层箔**、都跟着视角变色（象形字是风格化近似，见 README）。' +
         'NMR/SMR/UMR/SEMR/GMR 是同一工艺的不同基底。',
       layers: [millennium(0.95)]
     },

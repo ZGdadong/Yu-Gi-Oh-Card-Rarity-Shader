@@ -187,7 +187,7 @@
     "rarity.MILLENNIUM.short": "千年闪",
     "rarity.MILLENNIUM.full": "Millennium Rare",
     "rarity.MILLENNIUM.feat": "埃及文字图案闪膜；有 NMR、SMR、UMR、SEMR、GMR 等变体",
-    "rarity.MILLENNIUM.render": "线光栅 + **埃及象形字**按格随机拼成的\"文字带\"（象形字是风格化近似，见 README）。NMR/SMR/UMR/SEMR/GMR 是同一工艺的不同基底。",
+    "rarity.MILLENNIUM.render": "**埃及象形字**按格随机拼成的\"文字带\"：字与字之间一道竖线，字面和竖线各是**另一层箔**、都跟着视角变色（象形字是风格化近似，见 README）。NMR/SMR/UMR/SEMR/GMR 是同一工艺的不同基底。",
     "rarity.STARFOIL.short": "星箔",
     "rarity.STARFOIL.full": "Starfoil Rare",
     "rarity.STARFOIL.feat": "TCG，星形闪膜",
