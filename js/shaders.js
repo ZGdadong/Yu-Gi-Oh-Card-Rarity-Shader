@@ -274,9 +274,12 @@ float stampAt(vec2 cellIndex, vec2 f) {
  *   sel   —— 观察角给出的选择相位（0..1，见 angleSel）
  *   两者在环上的距离 < 半宽 w 的地方才显形。
  *
- * 可见比例最多是 2w（环上长度 2w 的那一段），所以 w 一律夹在 0.125 以内 ——
- * 这一条夹的是**代码**，不是参数：面板/配方里填多大都没法突破 25% 这个上限。
- * 真要改上限只能改这里（并且要同步改文档里"最多 25%"的说法）。
+ * 可见比例最多是 2w（环上长度 2w 的那一段），所以 w 一律夹在 0.225 以内 ——
+ * 这一条夹的是**代码**，不是参数：面板/配方里填多大都没法突破 45% 这个上限。
+ * 真要改上限只能改这里（并且要同步改文档里"最多 45%"的说法）。
+ *
+ * 上限的历史：先是 0.125（25%），用户看下来要"看得见更多图案"，改成 0.225（45%）。
+ * 只有千年闪 / 法老闪走这一条（KC 闪用的是 cursorGate，不受影响）。
  *
  * soft 是软边：smoothstep(w, w*soft, d)。硬切（soft→1）在 d≈w 的地方会让整片
  * 图案一跳一跳地全亮全灭；soft 越小边越软、越像"慢慢亮起来"。
@@ -284,7 +287,7 @@ float stampAt(vec2 cellIndex, vec2 f) {
  * ⚠️ local 那个场**必须是接近均匀分布的**，这一点踩过坑（见 filmField 的注释）。
  */
 float angleGate(float local, float sel, float w, float soft) {
-    float hw = min(w, 0.125);                                      // ← 25% 的天花板
+    float hw = min(w, 0.225);                                      // ← 45% 的天花板
     float d = abs(fract(local - sel + 0.5) - 0.5);                 // 环上的距离 0..0.5
     return smoothstep(hw, hw * clamp(soft, 0.05, 0.95), d);
 }
@@ -344,24 +347,32 @@ float angleSel(float gain) {
  * 窗口面积 = π·radius²；卡片在 iso 里是 aspect × 1 = 0.6729，所以
  *   radius 0.31  →  π×0.31² / 0.6729 ≈ **45% 的卡面**（这就是"45% 的窗口"）
  *
- * 亮度剖面：**光标那儿最亮，往外一路渐变到边缘** ——
- * 用 smoothstep(1, 0.30, t)：对焦那一圈（t < 0.30）全亮，剩下 70% 的半径都在渐变。
+ * 亮度剖面：**光标那儿最亮，往外一路渐变到边缘**。
+ * 用 smoothstep(1, 0.45, t)：对焦那一圈（t < 0.45）全亮，剩下 55% 的半径都在渐变。
  * 不用"中心一大块全亮、边上才收一下"那种（看着像一个实心圆盘，不像一片膜）。
+ * ⚠️ 这里原来是 0.30，改成 0.45 是因为**配色分档**（蓝/黄/橙/红）要用到整条半径：
+ *    0.30 的时候 t > 0.75 那一档（红）的亮度只剩 0.1，橙色那一档也才 0.3，
+ *    后面两档根本看不出颜色 —— 用户要的是"外围黄、再橙、边缘红"，得让它们亮得起来。
+ *    代价是窗口边缘比原来"实"一点。
  *
  * ⚠️ 实测口径说清楚（免得跟"45%"对不上）：随着渐变，**看得出明显变化**的那部分
  * 比窗口本身小一圈 —— 按"与金闪底子的逐像素差 > 10"量约 38%，再往外是一层很淡的
- * 过渡（这正是渐变要的效果）。见 tools/.cache/probe-kc-cursor.mjs。
+ * 过渡（这正是渐变要的效果）。见 tools/.cache/probe-kc-board.mjs。
  *
  * 鼠标贴到卡片边角时斑会被卡片切掉一部分，所以 45% 是**上限**（鼠标在正中间时最大）。
  * 边缘还拿噪声揉了一下（±15%），不然是个规规矩矩的圆、不像膜。
- * **颜色**仍然由观察角驱动（见 BODY.kc 的 ph）—— 转卡时这一块里的线在变色，
- * 只是"哪儿显形"这件事交给了鼠标。
+ * **颜色**由 cursorT 分档驱动（见 BODY.kc）：光标那儿蓝 → 黄 → 橙 → 边缘红，
+ * 分档和这道窗口的渐变共用同一个 t，所以"红的那一圈"正好落在快看不见的地方。
  */
-float cursorGate(vec2 spy, float radius) {
+// 光标距离的**归一化**版本：0 = 光标，1 = 窗口边缘。KC 板的配色分档也用它 ——
+// 两边必须用同一个 t，不然颜色分档会跟窗口边缘错开。
+float cursorT(vec2 spy, float radius) {
     vec2 d = spy - isoUV(uMouse);
     float wob = (fbm(spy * 1.4 + uSeed * 1.7) - 0.5) * 0.30;
-    float t = clamp(length(d) * (1.0 + wob) / max(radius, 0.02), 0.0, 1.0);
-    return smoothstep(1.0, 0.30, t);         // 对焦那一圈最亮，然后一路渐变到边缘
+    return clamp(length(d) * (1.0 + wob) / max(radius, 0.02), 0.0, 1.0);
+}
+float cursorGate(vec2 spy, float radius) {
+    return smoothstep(1.0, 0.45, cursorT(spy, radius));   // 对焦那一圈最亮，然后一路渐变到边缘
 }
 
 // 点到线段的距离（KC 闪的电路走线靠它算"离这条线多远"）
@@ -753,6 +764,25 @@ float boardZone(vec2 id, vec2 off, float freq) {
     return vnoise((id + off) * freq + 19.3 + uSeed);
 }
 /*
+ * 带**段量化**的留白场 —— 这是"线条断开"的修法。
+ *
+ * 原来每一格都拿 boardZone(id) 重新判一次"这儿有没有铜"，于是同一条车道
+ * 在噪声过阈值的地方会一格格断掉：线本来该是一条长走线，看着却是一截一截的
+ * 虚线（用户报的就是这个）。
+ *
+ * 现在把**沿走线方向**的坐标量化成 SEG 格一段，整段共用同一个采样点
+ * （垂距不变、只把"顺着方向走了多远"退回到段中点）—— 于是一条线至少连着 SEG 格，
+ * 端点只会出现在"段与段的交界"和"方向变了"这两处，而那两处本来就要压过孔。
+ * 垂直方向该怎么变还怎么变，所以留白仍然是一片一片的，不会变成整齐的条带。
+ */
+const float ZONE_SEG = 6.0;
+float boardZoneSeg(vec2 id, vec2 dv, vec2 off, float freq) {
+    float along = dot(id, dv);
+    vec2 perp = id - dv * along;                       // 沿车道不变的那一半
+    float seg = floor(along / ZONE_SEG) * ZONE_SEG;    // 量化到段首
+    return boardZone(perp + dv * (seg + ZONE_SEG * 0.5), off, freq);
+}
+/*
  * 一层铜。返回 (走线, 过孔)。
  *
  * 整个图案画**两遍**（见 effect 里的 A / B）：两层的方向场、疏密、线宽都不一样，
@@ -766,7 +796,9 @@ vec2 boardLayer(vec2 id, vec2 f, vec2 off, float dirF, float zoneF,
     float lane = boardLane(id, dv);
     // 这条车道有没有铜：整条线一起决定（所以线是连着的长线，不是虚线）
     float laneOn = step(laneTh, hash21(vec2(lane + laneSeed, 21.3) + uSeed));
-    float zoneOn = step(zoneTh, boardZone(id, off, zoneF));
+    // 留白用**量化版**：沿走线方向每 ZONE_SEG 格才重判一次，
+    // 所以一条线至少连着 ZONE_SEG 格（不然每格重抽会把线切成虚线，见 boardZoneSeg）
+    float zoneOn = step(zoneTh, boardZoneSeg(id, dv, off, zoneF));
     float has = laneOn * zoneOn;
     // 少数车道是"电源线"，粗一档 —— 真板子上粗细本来就不一样
     float wmul = mix(1.0, 1.8, step(0.82, hash21(vec2(lane + laneSeed, 5.1) + uSeed)));
@@ -777,9 +809,9 @@ vec2 boardLayer(vec2 id, vec2 f, vec2 off, float dirF, float zoneF,
 
     // 线的**尽头**压过孔：顺着方向问一格 —— 那格没铜、或者方向变了，就在这一头收口。
     // 收口的位置 = 线出格的地方（轴方向是格边中点，45° 方向是格角）
-    float nf = step(zoneTh, boardZone(id + stepv, off, zoneF))
+    float nf = step(zoneTh, boardZoneSeg(id + stepv, dv, off, zoneF))
              * step(0.9, dot(boardDir(id + stepv, off, dirF), dv));
-    float nb = step(zoneTh, boardZone(id - stepv, off, zoneF))
+    float nb = step(zoneTh, boardZoneSeg(id - stepv, dv, off, zoneF))
              * step(0.9, dot(boardDir(id - stepv, off, dirF), dv));
     vec2 ex = 0.5 * dv / max(abs(dv.x), abs(dv.y));
     float pr = hwv * 1.6;                            // 过孔半径（比线宽粗一圈）
@@ -789,20 +821,64 @@ vec2 boardLayer(vec2 id, vec2 f, vec2 off, float dirF, float zoneF,
 }
 
 /*
- * 电路板的调色板：**蓝 / 黄 / 橙 / 红**（用户指定的四种颜色）。
+ * 电路板的配色：**蓝 → 绿 → 黄 → 橙 → 红**，按到光标的距离**连续过渡**。
  *
- * k 在 0..1 上循环 → 落到四个色之一（硬选，不插值）：
- * 插值会在蓝↔黄之间穿过**绿色**、红↔蓝之间穿过紫色，那就不是这四个颜色了。
- * 颜色仍然跟着观察角流动 —— 角度一变，相位 k 平移，每条线换到下一个颜色，
- * 于是转卡的时候整块板的配色在蓝/黄/橙/红之间轮转。
+ * ⚠️ 三版都踩过坑，记清楚免得又走回去：
+ *   ① 第一版在 RGB 里**硬选**四色（floor + step）：颜色是对的，但卡面上一圈一圈的
+ *      硬边 —— 用户的原话是"过渡太粗糙，直接就蓝色变黄色"。
+ *   ② 在 RGB 里**直接插值**也不行：蓝↔黄的中点是**灰的**，整条带子会脏掉。
+ *   ③ 改成在色相上**均分**插值：过渡是顺了，但蓝只在**正中心一个点**上 ——
+ *      色相上"蓝→绿"跨了 0.263、"橙→红"才 0.064，均分的话稍微往外一点就已经是青绿
+ *      （实测中心那一档的平均色相是 0.427 = 绿）。用户要的是"中间一片蓝"。
+ *
+ * 现在：色相在 [0,1] 上**分段线性**，锚点的位置**不均分**，蓝和红各留一段平台：
+ *      k      0 ──── 0.26 ──── 0.50 ──── 0.70 ──── 0.87 ──── 1.0
+ *      h     .593   .593      .330      .195      .077      .013
+ *            蓝      蓝        绿        黄        橙        红
+ *   平台是给"光标那一池蓝"和"边缘那一圈红"留的地方，中间四段才是渐变。
+ *   每段内是**线性**的（不用 smoothstep）—— 用 smoothstep 会让五个锚点各自"停一下"，
+ *   又变成五条带子了。
+ *
+ * k：0 = 光标（蓝），1 = 窗口边缘（红，快看不见了）。
  */
 vec3 boardPalette(float k) {
-    float i = floor(fract(k) * 4.0);
-    vec3 c = vec3(0.28, 0.60, 1.00);                    // 蓝
-    c = mix(c, vec3(1.00, 0.88, 0.30), step(0.5, i));   // 黄
-    c = mix(c, vec3(1.00, 0.55, 0.16), step(1.5, i));   // 橙
-    c = mix(c, vec3(1.00, 0.26, 0.20), step(2.5, i));   // 红
-    return c;
+    float kk = clamp(k, 0.0, 1.0);
+    // 分段线性：每段只在 [a,b] 里生效，段外是 0/1，所以互不干扰
+    float h = 0.593;                                        // 0.00 蓝
+    h = mix(h, 0.330, clamp((kk - 0.26) / 0.24, 0.0, 1.0)); // 0.50 绿
+    h = mix(h, 0.195, clamp((kk - 0.50) / 0.20, 0.0, 1.0)); // 0.70 黄
+    h = mix(h, 0.077, clamp((kk - 0.70) / 0.17, 0.0, 1.0)); // 0.87 橙
+    h = mix(h, 0.013, clamp((kk - 0.87) / 0.13, 0.0, 1.0)); // 1.00 红
+    // 饱和度沿半径起伏一点（中段最饱和、两端略收）：均匀的彩虹在红端会显得比蓝端重
+    float arc = sin(kk * 3.14159265);
+    return hsv2rgb(vec3(h, 0.80 + 0.12 * arc, 1.0));
+}
+
+/*
+ * 四层铜合起来 —— **effect 与调试探针共用这一个入口**。
+ *
+ * 单独抽出来是为了"只有一份层参数"：tools/.cache/probe-board.mjs 会把 effect 之前的
+ * 所有内容切走、再挂一个只画几何的 effect。层参数如果写在 effect 里，探针就得手抄
+ * 一遍 —— 抄过一次，改了方向场频率之后探针还画着旧几何，白看半天。
+ *
+ * 返回 (走线, 过孔)。
+ */
+vec2 boardCopper(vec2 id, vec2 f, float hw, float laneTh, float zoneTh) {
+    // A/B 是原来那两层；C/D 是后加的一对 —— 铜层 2 → 4，板子的复杂度翻一倍。
+    // 四层的**方向场、留白场、疏密、线宽**全都不同，叠起来既有交叉又有层次；
+    // 顺带把原来"一大片全空"的地方填上（每层的留白场不一样，一片空不等于四层都空）。
+    //
+    // ⚠️ 方向场的频率**调低了一半**（0.28→0.14 等）。原来频率太高，方向场每隔两三格
+    //    就跨过一个量化档 → 走线动不动就拐 45°/90°，再被"方向变了就在线头压过孔"
+    //    那条规则盖上过孔 —— 看着就是**一截一截的短线**（用户报的"线条断开的"
+    //    其实就是这个，不是留白那一层）。频率降下来之后一整片区域共用一个走向，
+    //    走线能连着跑十几格，才像板子上的"街道"。
+    vec2 A = boardLayer(id, f, vec2(0.0, 0.0),   0.14, 0.30, laneTh,        zoneTh,        hw,        0.0);
+    vec2 B = boardLayer(id, f, vec2(3.7, 11.3),  0.11, 0.26, 0.66,          zoneTh + 0.10, hw * 0.68, 37.0);
+    vec2 C = boardLayer(id, f, vec2(7.3, 2.9),   0.17, 0.22, laneTh + 0.24, zoneTh - 0.03, hw * 0.82, 71.0);
+    vec2 D = boardLayer(id, f, vec2(12.1, 5.5),  0.09, 0.38, 0.76,          zoneTh + 0.14, hw * 0.58, 113.0);
+    return vec2(max(max(A.x, B.x), max(C.x, D.x)),
+                max(max(A.y, B.y), max(C.y, D.y)));
 }
 
 vec4 effect(vec2 uv) {
@@ -815,9 +891,11 @@ vec4 effect(vec2 uv) {
     vec2 spy = isoUV(cu);
 
     // ---- 可见窗口：以光标为圆心、中心最亮往外渐变的软斑 ----
-    float gate = cursorGate(spy, uP0.w);
+    //   ct 是**归一化距离**（0 = 光标，1 = 窗口边缘），窗口和配色共用它
+    float ct = cursorT(spy, uP0.w);
+    float gate = smoothstep(1.0, 0.30, ct);          // 对焦那一圈最亮，然后一路渐变到边缘
 
-    // ---- 走线：两层铜 ----
+    // ---- 走线：四层铜 ----
     // 格子在 iso 坐标里是**方的**（isoGrid 而不是 squareGrid —— 后者会把图案压扁，
     // 圆过孔会被拉成椭圆，见文件上方 isoGrid 的注释）。
     vec2 g = isoGrid(cu, max(uP0.y, 0.02));
@@ -825,36 +903,31 @@ vec4 effect(vec2 uv) {
     vec2 f = fract(g) - 0.5;
     float hw = clamp(uP0.z, 0.010, 0.40);            // 走线半宽（单位：格）
 
-    // A 层：主层 —— 疏密由 uP1.z 给（小 = 密）
-    vec2 A = boardLayer(id, f, vec2(0.0, 0.0), 0.28, 0.30, uP1.z, uP2.x, hw, 0.0);
-    // B 层：更稀、更细、走向场也不同 —— 与 A 层交叉，板子才"复杂"
-    vec2 B = boardLayer(id, f, vec2(3.7, 11.3), 0.21, 0.26, 0.66, uP2.x + 0.10, hw * 0.68, 37.0);
-    float trace = max(A.x, B.x);
-    float pad = max(A.y, B.y);
+    // A/B 是原来那两层；C/D 是这次加的一对 —— 层参数在 boardCopper 里（探针共用那份）
+    vec2 copper = boardCopper(id, f, hw, uP1.z, uP2.x);
+    float trace = copper.x;
+    float pad = copper.y;
 
     // ---- 显色：板底一层暗箔，走线是**调色板里的彩色铜** ----
-    // 位置项给到 0.62 / 0.45（跨卡面约 1.2 个周期）—— 一张卡上不同区域的颜色本来就不一样，
-    // 不是"整块板一个色"。底色与走线都取自**蓝/黄/橙/红**那块调色板。
-    float ph = (uView.x * 0.55 + uView.y * 0.38) * uP1.y
-             + (spy.x * 0.62 + spy.y * 0.45) + uTime * 0.03;
-    float pal = ph * 0.62 + 0.05;
-    // 板底：调色板里的颜色当底（混一点白，别把印刷整片盖死）
-    vec3 tint = mix(vec3(1.0), boardPalette(pal), 0.75);
-    // 板底给 0.42 而不是更低：板底压得太暗，那一片就成了一道**阴影**（实测 0.20 时
-    // 整条带子看着像卡片上蒙了块暗斑）。0.42 的板底 + 走线的铜色，才是"膜在反光"。
-    vec3 col = overlaySpec(tex.rgb, tint * (0.42 + 0.20 * trace), 0.35);
+    // 颜色 = **到光标的距离**，在**蓝 → 绿 → 黄 → 橙 → 红**之间连续过渡
+    //（见 boardPalette：色相上线性插值，所以是一条真正的渐变，不是五条色带）。
+    // 用的是和窗口同一个 ct，所以"红的那一圈"正好落在渐隐的地方 —— 用户要的
+    // "边缘快要看不到的红色"。再加一点点视角漂移（uP1.y），免得鼠标停着时完全死板。
+    float pal = clamp(ct + (uView.x * 0.05 + uView.y * 0.04) * clamp(uP1.y, 0.0, 2.0), 0.0, 1.0);
+    // 板底：调色板里的颜色当底，但**要压暗 + 降饱和**。
+    //   ⚠️ 这里踩过一次：板底和走线原来是**同一个颜色**（都取 boardPalette(pal)，
+    //      而 pal 只跟到光标的距离有关）—— 结果同一个半径上底和线一模一样，
+    //      图案整个读不出来，只剩一坨蓝斑。现在把底压到 0.60 的混色、亮度也降下来，
+    //      走线才是那块板上唯一"亮起来"的东西。
+    vec3 tint = mix(vec3(1.0), boardPalette(pal), 0.70);
+    vec3 col = overlaySpec(tex.rgb, tint * (0.28 + 0.14 * trace), 0.40);
     // ⚠️ 走线**不能用加法叠**（实测）：加法加在亮的插画上会一路白掉，四个颜色全变成
     //    粉白 —— 用户要的就是"蓝黄橙红"，白掉就白做了。所以走线是**用彩色铜替掉底色**
     //    （mix 进去），再补一点点自己的光。铜的明暗跟着印刷走（印得亮的线更亮）。
-    //    颜色 = 调色板四色之一 + **每条车道自己的偏移**：偏移给到 ±0.35（将近一整格，
-    //    四色一格是 0.25），所以**相邻的线常常是不同颜色** —— 蓝挨着黄、橙挨着红，
-    //    一张卡上四个颜色同时都在；转卡时相位平移，颜色就一条一条地轮换过去。
-    float laneId = boardLane(id, boardDir(id, vec2(0.0), 0.28));
-    float laneJit = (hash21(vec2(laneId, 33.7) + uSeed) - 0.5) * 0.70;
-    vec3 lineCol = boardPalette(pal + laneJit);
-    vec3 metal = lineCol * (0.30 + 0.90 * luma(tex.rgb));
-    col = mix(col, metal, clamp(trace * 0.88 + pad * 0.92, 0.0, 1.0));
-    col += lineCol * (trace * 0.20 + pad * 0.26) * (0.35 + 0.65 * (1.0 - luma(tex.rgb)));
+    vec3 lineCol = boardPalette(pal);
+    vec3 metal = lineCol * (0.62 + 0.85 * luma(tex.rgb));
+    col = mix(col, metal, clamp(trace * 0.94 + pad * 0.96, 0.0, 1.0));
+    col += lineCol * (trace * 0.16 + pad * 0.22) * (0.35 + 0.65 * (1.0 - luma(tex.rgb)));
 
     // 覆盖度里乘上窗口：窗口外这一层**什么都不画**（alpha=0），底下的金闪原样留着
     return vec4(col, tex.a * cover(region, uP0.x) * gate);
