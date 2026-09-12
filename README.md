@@ -18,6 +18,7 @@
 | --- | --- |
 | 一页读完（43 条速查表 / 做不出来的 / 验证结论） | **[`docs/总结.md`](docs/总结.md)** |
 | 实现细节（架构 / 掩膜 / 17 个着色器逐个 / 43 条配方 / 换卡 / 多语言） | **[`docs/rarity-shaders.md`](docs/rarity-shaders.md)** |
+| **技术总结**（渲染管线怎么做起来的 / 复核发现的问题） | **[`docs/技术总结.md`](docs/技术总结.md)** |
 
 ![43 个罕贵度一览](effects.jpg)
 
@@ -67,7 +68,7 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | | 怎么做 | 结果 |
 | --- | --- | --- |
 | **临时看一张** | 打开页面，点「卡图」下拉框左边的 **⟳** | 浏览器里**当场烤**出来，立刻能选。只活在这一份内存里，**刷新页面就没了** |
-| **长期留下** | `node tools/embed-card.mjs` | 重新生成 `js/card-textures.js`（7 张卡约 4 分钟），并发到 `assets/` 归档；之后每次打开都在 |
+| **长期留下** | `node tools/embed-card.mjs` | 重新生成 `js/card-textures.js`（10 张卡，几分钟），并发到 `assets/` 归档；之后每次打开都在 |
 
 **为什么 ⟳ 不是"重新读一遍目录"那么简单**：下拉框列的是 `js/card-textures.js`，而卡图不是直接读 `images/` 的
 —— 每张卡还需要一张**工艺区域掩膜**（卡名笔画靠 Otsu 从图里抠、插画与效果框的矩形要按卡片外沿映射），
@@ -193,7 +194,7 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 ```
 
 -- A. 归档一致性 --
-  PASS  生成物里记的每张卡 SHA-256 都与 assets/ 里的归档一致  —— 7 张全部一致
+  PASS  生成物里记的每张卡 SHA-256 都与 assets/ 里的归档一致  —— 10 张全部一致
   PASS  images/ 里的原始卡图与 assets/ 归档一致（没被改过）  —— 6f4313494a38e490…
   PASS  归档文件用的是新文件名（35952884.jpg 已改名）  —— assets/Shooting Quasar Dragon.jpg
 
@@ -268,8 +269,8 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
   PASS  识别出的长宽比都在游戏王卡的 59:86 附近（±0.03）  —— 0.6711 · 0.6703 · 0.6948 · 0.6740
 
 -- L. 多卡图 --
-  PASS  images/ 下的每张卡都进了 CardTextures  —— 7 张：A-to-Z-Dragon Buster Cannon · Blue-Eyes Chaos MAX Dragon · Meklord Astro Mekanikle · Odin, Father of the Aesir · Raidraptor - Rising Rebellion Falcon · Shooting Quasar Dragon · The First Darklord
-  PASS  生成物里的卡数与 images/ 下的图片数一致  —— 7 张
+  PASS  images/ 下的每张卡都进了 CardTextures  —— 10 张：A-to-Z-Dragon Buster Cannon · Adamancipator Risen - Dragite · Blue-Eyes Chaos MAX Dragon · Dragon Master Magia · Five-Headed Dragon · Meklord Astro Mekanikle · Odin, Father of the Aesir · Raidraptor - Rising Rebellion Falcon · Shooting Quasar Dragon · The First Darklord
+  PASS  生成物里的卡数与 images/ 下的图片数一致  —— 10 张
   PASS  卡片外沿是自动识别出来的，且比例像游戏王卡（0.60~0.78）  —— A-to-Z-Dragon Buster Cannon: 识别 0.6717 · Blue-Eyes Chaos MAX Dragon: 识别 0.6726 · Meklord Astro Mekanikle: 识别 0.6726 · Odin, Father of the Aesir: 识别 0.6726 · Raidraptor - Rising Rebellion Falcon: 识别 0.6717 · Shooting Quasar Dragon: 识别 0.6726 · The First Darklord: 识别 0.6717
   PASS  自动识别出的外沿与手工量的一致（这张卡是 26,26 → 787,1157，允许 ±3px）  —— 26,26 → 788,1159
   PASS  圆角不再烤进纹理（改由运行时的 uCardRound 控制）  —— 0px
@@ -383,7 +384,9 @@ RESULT: 43 个罕贵度 · 17 个工艺 · 61 个参数 · 25 个预设全部检
 - **换一张卡时，卡框 / 卡图窗 / 效果框那几个矩形是按游戏王**标准版式**写死的比例，所有卡共用。**
   同调怪、效果怪、通常怪都一样，但灵摆卡（多一个灵摆区）、连接怪（没有等级星）、
   无效果怪对不上，得在 `tools/embed-card.mjs` 顶部的 `CARDS` 表里按文件名覆盖。
-  **卡名抠图还写死了"深字浅底"这个极性** —— 真正的金闪原图是金字压深红底，极性是反的，必须一起改。
+  **卡名抠图的极性是自动判的**（Otsu 阈值 + 少数派即笔画，`js/bake.js` 的 `NAME_INK.auto`），
+  所以金字压深红底的真正金闪原图也能自己认出来；万一某张卡自动判错，
+  在 `js/bake.js` 的 `CARDS` 表里写 `nameInk: { auto: false, lo, hi }` 钉死即可。
 - **语言包是 .js 不是 .json**：`fetch('./Languages/xx.json')` 在 `file://` 下会被 CORS 拦掉，
   而这个项目要求双击 index.html 就能跑。所以语言包写成一句 `CardI18nPack['xx'] = {...}`，
   用 `<script>` 注入加载。机制（localStorage / 缺键回退 / `{var}` 插值 / 下拉框即时切换）与
@@ -446,7 +449,7 @@ Yu-Gi-Oh Card Rarity/
 │   ├── lib/bake.mjs             → js/bake.js 的源码文本
 │   ├── gen-doc.mjs              重填文档里自动生成的表
 │   ├── doc-check.mjs            核对文档里可机器判定的说法
-│   ├── verify.mjs               33 项自检
+│   ├── verify.mjs               63 项自检
 │   ├── effects.mjs              逐罕贵度 / 逐工艺 / 逐参数 / 逐预设实测
 │   ├── gen-lang.mjs             从 js/ 里的文案生成 Languages/zh-CN.js
 │   ├── shot.mjs / montage.mjs   取景 / 拼图
