@@ -68,7 +68,7 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 | | 怎么做 | 结果 |
 | --- | --- | --- |
 | **临时看一张** | 打开页面，点「卡图」下拉框左边的 **⟳** | 浏览器里**当场烤**出来，立刻能选。只活在这一份内存里，**刷新页面就没了** |
-| **长期留下** | `node tools/embed-card.mjs` | 重新生成 `js/card-textures.js`（10 张卡，几分钟），并发到 `assets/` 归档；之后每次打开都在 |
+| **长期留下** | `node tools/embed-card.mjs` | 重新生成 `js/card-textures.js`（9 张卡，几分钟），并发到 `assets/` 归档；之后每次打开都在 |
 
 **为什么 ⟳ 不是"重新读一遍目录"那么简单**：下拉框列的是 `js/card-textures.js`，而卡图不是直接读 `images/` 的
 —— 每张卡还需要一张**工艺区域掩膜**（卡名笔画靠 Otsu 从图里抠、插画与效果框的矩形要按卡片外沿映射），
@@ -194,7 +194,7 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 ```
 
 -- A. 归档一致性 --
-  PASS  生成物里记的每张卡 SHA-256 都与 assets/ 里的归档一致  —— 10 张全部一致
+  PASS  生成物里记的每张卡 SHA-256 都与 assets/ 里的归档一致  —— 9 张全部一致
   PASS  images/ 里的原始卡图与 assets/ 归档一致（没被改过）  —— 6f4313494a38e490…
   PASS  归档文件用的是新文件名（35952884.jpg 已改名）  —— assets/Shooting Quasar Dragon.jpg
 
@@ -212,15 +212,15 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
   PASS  卡图窗占比合理（35% ~ 55%）  —— 40.7%
   PASS  效果框占比合理（15% ~ 28%）  —— 18.9%
   PASS  卡框占比合理（20% ~ 40%）  —— 37.2%
-  PASS  每张卡的卡名笔画占比都在 1% ~ 6%（没有哪张被整条名带填满）  —— A-to-Z-Dragon Buster 1.85% · Blue-Eyes Chaos MAX  1.88% · Meklord Astro Mekani 1.85% · Odin, Father of the  1.68% · Raidraptor - Rising  2.07% · Shooting Quasar Drag 1.81% · The First Darklord 1.61%
-  PASS  每张卡的卡名极性都是自动判出来的，且两类亮度差够（≥ 0.12）  —— A-to-Z-Dragon Buster 深字浅底/0.318 · Blue-Eyes Chaos MAX  深字浅底/0.426 · Meklord Astro Mekani 深字浅底/0.419 · Odin, Father of the  深字浅底/0.815 · Raidraptor - Rising  白字黑底/0.741 · Shooting Quasar Drag 深字浅底/0.808 · The First Darklord 深字浅底/0.332
+  PASS  每张卡的卡名笔画占比都在 1% ~ 6%（没有哪张被整条名带填满）  —— A-to-Z-Dragon Buster 1.85% · Adamancipator Risen  1.84% · Blue-Eyes Chaos MAX  1.88% · Dragon Master Magia 1.75% · Meklord Astro Mekani 1.85% · Odin, Father of the  1.68% · Raidraptor - Rising  2.07% · Shooting Quasar Drag 1.81% · The First Darklord 1.61%
+  PASS  每张卡的卡名极性都是自动判出来的，且两类亮度差够（≥ 0.12）  —— A-to-Z-Dragon Buster 深字浅底/0.318 · Adamancipator Risen  深字浅底/0.802 · Blue-Eyes Chaos MAX  深字浅底/0.426 · Dragon Master Magia 深字浅底/0.325 · Meklord Astro Mekani 深字浅底/0.419 · Odin, Father of the  深字浅底/0.815 · Raidraptor - Rising  白字黑底/0.741 · Shooting Quasar Drag 深字浅底/0.808 · The First Darklord 深字浅底/0.332
 
 -- D. 罕贵度表 --
   PASS  罕贵度 id 唯一  —— 43 条
   PASS  LIST 与 ORDER 长度一致  —— 43 / 43
   PASS  每个图层引用的着色器都存在  —— 全部命中
   PASS  每条罕贵度都有"怎么做的"说明  —— 43 条都有
-  PASS  图层参数合理（强度 > 0、遮罩码在 0..10）  —— OK
+  PASS  图层参数合理（强度 > 0、遮罩码在 0..13）  —— OK
   PASS  每个工艺着色器都被至少一个罕贵度用到  —— 17 个工艺全部用上
   PASS  着色器清单齐备（工艺 17 + 基础 4）  —— 工艺 17 · 合计 21 个片段着色器
      分节: base=12 · high=10 · parallel=10 · dt=6 · other=5
@@ -232,8 +232,8 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 
 -- F. 确定性 --
   PASS  同一时间点重复渲染逐字节一致  —— 最大差 0
-  PASS  时间推进后画面确实变了（时钟接通了闪膜的流动）  —— t=0 vs t=9 卡片区平均差 12.43（全屏 6.96）
-  PASS  自动摆动真的在动  —— 摆动 0s vs 4s 平均差 21.19
+  PASS  时间推进后画面确实变了（时钟接通了闪膜的流动）  —— t=0 vs t=9 卡片区平均差 12.49（全屏 7.00）
+  PASS  自动摆动真的在动  —— 摆动 0s vs 4s 平均差 19.34
 
 -- G. 视角 / 倾斜 --
   PASS  鼠标左右移动会改变画面（3D 倾斜 + 衍射相位）  —— 平均差 21.23，最大 220
@@ -269,12 +269,12 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
   PASS  识别出的长宽比都在游戏王卡的 59:86 附近（±0.03）  —— 0.6711 · 0.6703 · 0.6948 · 0.6740
 
 -- L. 多卡图 --
-  PASS  images/ 下的每张卡都进了 CardTextures  —— 10 张：A-to-Z-Dragon Buster Cannon · Adamancipator Risen - Dragite · Blue-Eyes Chaos MAX Dragon · Dragon Master Magia · Five-Headed Dragon · Meklord Astro Mekanikle · Odin, Father of the Aesir · Raidraptor - Rising Rebellion Falcon · Shooting Quasar Dragon · The First Darklord
-  PASS  生成物里的卡数与 images/ 下的图片数一致  —— 10 张
-  PASS  卡片外沿是自动识别出来的，且比例像游戏王卡（0.60~0.78）  —— A-to-Z-Dragon Buster Cannon: 识别 0.6717 · Blue-Eyes Chaos MAX Dragon: 识别 0.6726 · Meklord Astro Mekanikle: 识别 0.6726 · Odin, Father of the Aesir: 识别 0.6726 · Raidraptor - Rising Rebellion Falcon: 识别 0.6717 · Shooting Quasar Dragon: 识别 0.6726 · The First Darklord: 识别 0.6717
+  PASS  images/ 下的每张卡都进了 CardTextures  —— 9 张：A-to-Z-Dragon Buster Cannon · Adamancipator Risen - Dragite · Blue-Eyes Chaos MAX Dragon · Dragon Master Magia · Meklord Astro Mekanikle · Odin, Father of the Aesir · Raidraptor - Rising Rebellion Falcon · Shooting Quasar Dragon · The First Darklord
+  PASS  生成物里的卡数与 images/ 下的图片数一致  —— 9 张
+  PASS  卡片外沿是自动识别出来的，且比例像游戏王卡（0.60~0.78）  —— A-to-Z-Dragon Buster Cannon: 识别 0.6717 · Adamancipator Risen - Dragite: 识别 0.6726 · Blue-Eyes Chaos MAX Dragon: 识别 0.6726 · Dragon Master Magia: 识别 0.6717 · Meklord Astro Mekanikle: 识别 0.6726 · Odin, Father of the Aesir: 识别 0.6726 · Raidraptor - Rising Rebellion Falcon: 识别 0.6717 · Shooting Quasar Dragon: 识别 0.6726 · The First Darklord: 识别 0.6717
   PASS  自动识别出的外沿与手工量的一致（这张卡是 26,26 → 787,1157，允许 ±3px）  —— 26,26 → 788,1159
   PASS  圆角不再烤进纹理（改由运行时的 uCardRound 控制）  —— 0px
-  PASS  切到别的卡之后画面确实变了  —— A-to-Z-Dragon Buster Cannon 0.0 · Blue-Eyes Chaos MAX Dragon 45.7 · Meklord Astro Mekanikle 47.2 · Odin, Father of the Aesir 57.3 · Raidraptor - Rising Rebellion Falcon 53.1 · Shooting Quasar Dragon 57.5 · The First Darklord 34.5
+  PASS  切到别的卡之后画面确实变了  —— A-to-Z-Dragon Buster Cannon 0.0 · Adamancipator Risen - Dragite 56.0 · Blue-Eyes Chaos MAX Dragon 45.8 · Dragon Master Magia 31.5 · Meklord Astro Mekanikle 47.3 · Odin, Father of the Aesir 56.9 · Raidraptor - Rising Rebellion Falcon 53.1 · Shooting Quasar Dragon 57.2 · The First Darklord 34.5
   PASS  切回第 0 张能逐字节回到原样  —— 最大差 0
 
 -- M. 多语言 --
@@ -292,10 +292,11 @@ node tools/gen-doc.mjs       # 改了 rarities.js 之后重填文档里的表
 -- O. 出图 --
   PASS  截图写出  —— E:\ZG\Documents\DeepSeekHarness\P5.js\Art\Yu-Gi-Oh Card Rarity\tools\.cache\verify-preview.png
 
-RESULT: PASS  （63 项）
+================================================================
+RESULT: PASS  （63 项全过）
 ```
 
-### `tools/effects.mjs` —— 43 + 17 + 60 + 23 全部实测
+### `tools/effects.mjs` —— 43 + 17 + 61 + 25 全部实测
 
 ```
 -- ① 每个罕贵度相对"平卡 N"改了什么 --
