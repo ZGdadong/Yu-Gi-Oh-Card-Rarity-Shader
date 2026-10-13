@@ -1,6 +1,15 @@
+**中文** · [English](README.en.md)
+
 # 游戏王 罕贵度 · 工艺着色器
 
 **一张真实的游戏王卡 + 43 条罕贵度的工艺着色器。**
+
+> ### 🎬 在线预览（什么都不用装）
+>
+> - **交互版（GitHub Pages）** → <https://zgdadong.github.io/Yu-Gi-Oh-Card-Rarity-Shader/>
+> - **预览视频（42 秒 · 1080p · 10.9 MB）** → [`preview.mp4`](preview.mp4) ｜ [网页播放页](preview.html)
+>
+> [![点开看 42 秒预览视频](preview-video.jpg)](https://zgdadong.github.io/Yu-Gi-Oh-Card-Rarity-Shader/preview.html)
 
 卡图是你给的 `images/Shooting Quasar Dragon.jpg` —— **Shooting Quasar Dragon**
 （龙族 / 同调 / 效果 · 光 · ★12 · ATK 4000 / DEF 4000）。
@@ -30,7 +39,10 @@
 
 ## 怎么跑
 
-**直接双击 `index.html`** —— 无外部依赖、无需构建、`file://` 下即可运行。
+**最省事：直接开在线版** → <https://zgdadong.github.io/Yu-Gi-Oh-Card-Rarity-Shader/>
+（就是本仓库部署在 GitHub Pages 上的同一份东西，`https://` 下还能让「卡图」旁的 ⟳ 自动扫目录）
+
+**或者下载下来双击 `index.html`** —— 无外部依赖、无需构建、`file://` 下即可运行。
 
 > 页内脚本都是**经典 script**（不是 ES module）。卡图与掩膜是**以 data URI 内嵌**的，
 > 不是 `file://` 读本地图片 —— Chrome 把每个本地文件当独立来源，用本地 `<img>` 做
@@ -417,7 +429,10 @@ RESULT: 43 个罕贵度 · 17 个工艺 · 61 个参数 · 25 个预设全部检
 ```
 Yu-Gi-Oh Card Rarity/
 ├── index.html
+├── preview.html                 GitHub Pages 上的视频播放页（README 里没法内嵌 mp4）
 ├── css/style.css
+├── .nojekyll                    Pages 不跑 Jekyll，直接当静态站点发
+├── README.md  README.en.md       中文 / English
 ├── images/                      **卡图放这儿**，有几张就认几张（文件名即卡 id）
 │   └── Shooting Quasar Dragon.jpg
 ├── assets/                      原图逐字节归档（verify 核对 SHA-256）
@@ -441,6 +456,7 @@ Yu-Gi-Oh Card Rarity/
 │   ├── 游戏王罕贵度总结（OCG  TCG）.md     原始文档（未改动）
 │   ├── rarity-shaders.md                  **罕贵度 → 着色器**：架构 / 掩膜 / 着色器逐个 / 43 条配方
 │   ├── 总结.md                            **一页总结**：43 条速查表 / 做不出来的 / 验证结论
+│   ├── 技术总结.md                        实现层总结：渲染管线 / 着色器清单 / 复核发现的问题
 │   └── mask-preview.png                   掩膜预览
 ├── tools/
 │   ├── analyze-card.mjs         逐行/逐列边缘强度剖面
@@ -455,5 +471,5 @@ Yu-Gi-Oh Card Rarity/
 │   ├── gen-lang.mjs             从 js/ 里的文案生成 Languages/zh-CN.js
 │   ├── shot.mjs / montage.mjs   取景 / 拼图
 │   └── node_modules → 复用隔壁 card-shader 的 playwright-core（junction 链接）
-└── preview.png / effects.jpg / sheet.png / panel.png / panel-en.png
+└── preview.mp4 / preview-video.jpg / preview.png / effects.jpg / sheet.png / panel.png / panel-en.png
 ```

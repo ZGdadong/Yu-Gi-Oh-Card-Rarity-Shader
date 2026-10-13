@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>预览视频 · 游戏王罕贵度工艺着色器</title>
+<!--
+  GitHub Pages 用的一个极简视频页。
+  GitHub 的 README 里没法内嵌播放 mp4，所以这里给一个能直接播放的页面；
+  视频文件本身在仓库根目录 preview.mp4。
+-->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; padding: 28px 18px 40px;
+    background: radial-gradient(1200px 600px at 50% -10%, #16203a 0%, #05070c 60%);
+    color: #dfe7f5; font: 15px/1.7 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  h1 { margin: 0; font-size: 21px; letter-spacing: .02em; text-align: center; }
+  h1 small { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; color: #8fa0bd; letter-spacing: 0; }
+  video {
+    width: min(1100px, 100%); height: auto; border-radius: 12px; background: #000;
+    box-shadow: 0 18px 48px rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.08);
+  }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  a.btn {
+    display: inline-block; padding: 10px 18px; border-radius: 999px; text-decoration: none;
+    font-weight: 600; font-size: 14px; border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.06); color: #dfe7f5;
+  }
+  a.btn.primary { background: linear-gradient(135deg,#2f6bd8,#5aa0ff); border-color: transparent; color: #fff; }
+  a.btn:hover { filter: brightness(1.15); }
+  p.note { margin: 0; max-width: 760px; text-align: center; color: #8fa0bd; font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>游戏王 罕贵度 · 工艺着色器
+    <small>43 rarities × 17 hand-written WebGL shaders · preview clip (42s)</small>
+  </h1>
+
+  <video src="preview.mp4" poster="preview-video.jpg" controls playsinline preload="metadata"></video>
+
+  <div class="bar">
+    <a class="btn primary" href="./">打开交互版 →</a>
+    <a class="btn" href="https://github.com/ZGdadong/Yu-Gi-Oh-Card-Rarity-Shader">GitHub 仓库</a>
+    <a class="btn" href="preview.mp4" download>下载视频</a>
+  </div>
+
+  <p class="note">
+    视频里是真实运行画面（鼠标在卡面上移动 → 卡片倾斜、闪膜扫过、KC 电路板跟着鼠标亮）。
+    交互版无需安装、无需构建，直接在浏览器里跑。<br>
+    Card art and「遊☆戯☆王」are © Studio Dice / SHUEISHA / TV TOKYO / KONAMI — for study and research only, not for commercial use.
+  </p>
+</body>
+</html>
