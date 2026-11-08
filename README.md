@@ -75,6 +75,12 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 
 ## 加一张新卡图
 
+> **卡图标准尺寸：`813×1185`。** 本仓库 `images/` 里那 9 张、`js/card-textures.js` 里每条记录的 `width` / `height`
+> 全是这个尺寸；它也正是 [YGOPRODeck](https://ygoprodeck.com/) 的 `images/cards/<卡号>.jpg` 尺寸 ——
+> **所以 YGOPRODeck 的卡图就是这个项目的标准尺寸，下下来可以直接用。**
+> 其它尺寸也能烤（区域是按比例映射的、卡片比例跟着图片走），但卡框 / 卡图窗 / 效果框这些版式常量是按这个比例标的，
+> 同尺寸最稳。
+
 把图片丢进 `images/`（文件名就是卡 id），然后二选一：
 
 | | 怎么做 | 结果 |
@@ -99,7 +105,7 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 卡号就是卡名下面那串数字）：
 
 - 图片直链：`https://images.ygoprodeck.com/images/cards/<卡号>.jpg`
-  —— **813×1185，和本项目的纹理尺寸一模一样**（例：青眼白龙 <https://images.ygoprodeck.com/images/cards/89631139.jpg>）
+  —— **`813×1185`，就是上面说的本项目标准尺寸**（例：青眼白龙 <https://images.ygoprodeck.com/images/cards/89631139.jpg>）
 - ⚠️ 只取 `cards/` 这一档：`cards_cropped/` 是 624×624 的方形图、`cards_small/` 只有 268×391，烤出来会糊
 - 下下来丢进 `images/`，**文件名就是卡 id**（`Blue-Eyes White Dragon.jpg` → 卡 id `Blue-Eyes White Dragon`），
   然后 `node tools/embed-card.mjs`，或者直接点「卡图」左边的 **⟳** 当场烤 —— 和上面两条路完全一样

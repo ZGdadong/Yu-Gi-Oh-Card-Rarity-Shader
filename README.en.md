@@ -76,6 +76,12 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
 
 ## Adding a new card image
 
+> **The standard card image size is `813×1185`.** All nine images in this repo's `images/`, and every `width` / `height`
+> recorded in `js/card-textures.js`, are exactly that size — and so is [YGOPRODeck](https://ygoprodeck.com/)'s
+> `images/cards/<passcode>.jpg` — **so YGOPRODeck's card images are already this project's standard size; just download and use them.**
+> Other sizes bake fine too (the regions are mapped proportionally and the card's aspect ratio follows the image),
+> but the layout constants (frame / art window / effect box) are calibrated to this ratio, so the same size is the safest.
+
 Drop the image into `images/` (the file name is the card id), then take one of two routes:
 
 | | How | Result |
@@ -100,7 +106,7 @@ If you'd rather not photograph a card, **[YGOPRODeck](https://ygoprodeck.com/)**
 (search the Card Database by name or by passcode — the passcode is the number printed under the card name):
 
 - Direct image URL: `https://images.ygoprodeck.com/images/cards/<passcode>.jpg`
-  — **813×1185, exactly the texture size this project uses** (example: Blue-Eyes White Dragon → <https://images.ygoprodeck.com/images/cards/89631139.jpg>)
+  — **`813×1185`, i.e. this project's standard size** (example: Blue-Eyes White Dragon → <https://images.ygoprodeck.com/images/cards/89631139.jpg>)
 - ⚠️ Take the `cards/` variant only: `cards_cropped/` is a 624×624 square and `cards_small/` is only 268×391 — both come out blurry
 - Drop it into `images/` — **the file name is the card id** (`Blue-Eyes White Dragon.jpg` → card id `Blue-Eyes White Dragon`) —
   then run `node tools/embed-card.mjs`, or just click the **⟳** next to "Card image" to bake it on the spot. Same two routes as above.
