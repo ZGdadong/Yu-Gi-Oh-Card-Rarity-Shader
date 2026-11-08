@@ -93,6 +93,30 @@ python -m http.server 8020      # 然后打开 http://localhost:8020
   `SecurityError`（整个项目就是为了绕开这条才把卡图内嵌成 data URI 的）。所以改成弹文件选择框，
   用 `FileReader` 读成 data URI 再烤 —— 用户主动选的文件不带来源限制
 
+### 卡图从哪儿来：YGOPRODeck（省得自己拍）
+
+懒得自己拍卡的话，**[YGOPRODeck](https://ygoprodeck.com/)** 上基本什么卡都有（Card Database 里按卡名或卡号搜，
+卡号就是卡名下面那串数字）：
+
+- 图片直链：`https://images.ygoprodeck.com/images/cards/<卡号>.jpg`
+  —— **813×1185，和本项目的纹理尺寸一模一样**（例：青眼白龙 <https://images.ygoprodeck.com/images/cards/89631139.jpg>）
+- ⚠️ 只取 `cards/` 这一档：`cards_cropped/` 是 624×624 的方形图、`cards_small/` 只有 268×391，烤出来会糊
+- 下下来丢进 `images/`，**文件名就是卡 id**（`Blue-Eyes White Dragon.jpg` → 卡 id `Blue-Eyes White Dragon`），
+  然后 `node tools/embed-card.mjs`，或者直接点「卡图」左边的 **⟳** 当场烤 —— 和上面两条路完全一样
+
+实测（青眼白龙，813×1185，下下来没做任何处理）：
+
+| 项 | 结果 |
+| --- | --- |
+| 外沿自动识别 | `26,26 → 788,1159`（长宽比 0.6726） |
+| 覆盖率 | 卡名 1.77% · 卡图 40.8% · 效果框 18.9% · 卡框 37.1% · 外环 3.2% |
+| 卡名笔画 | Otsu 0.333，自动判成"深字浅底"，两类亮度差 0.574 |
+| 渲染 | 面闪 / 金闪 / 浮雕 / 鬼闪 / KC 闪 / 千年闪全部正常，相对平卡 N 的逐像素差 **10.8 ~ 28.3** |
+
+拿来练手完全够用。**但卡图版权不属于本项目**：YGOPRODeck 上的图是社区整理的官方卡图，
+「遊☆戯☆王」相关权利属于 KONAMI / 集英社等，**只用于自己学习研究，不要商用、不要拿去当自己的作品发**；
+另外灵摆卡 / 连接怪 / 无效果怪的版式对不上，见下面「已知取舍」。
+
 ---
 
 ## 17 个工艺

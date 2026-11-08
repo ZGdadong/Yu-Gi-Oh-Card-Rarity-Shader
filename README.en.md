@@ -94,6 +94,31 @@ The two routes differ only in how they learn there's a new image:
   `SecurityError` outright (this whole project embeds the card images as data URIs precisely to dodge that). So it opens a file picker instead,
   reads the file into a data URI with `FileReader` and bakes that — a file the user picked deliberately carries no origin restriction
 
+### Where to get card images: YGOPRODeck
+
+If you'd rather not photograph a card, **[YGOPRODeck](https://ygoprodeck.com/)** has pretty much every card
+(search the Card Database by name or by passcode — the passcode is the number printed under the card name):
+
+- Direct image URL: `https://images.ygoprodeck.com/images/cards/<passcode>.jpg`
+  — **813×1185, exactly the texture size this project uses** (example: Blue-Eyes White Dragon → <https://images.ygoprodeck.com/images/cards/89631139.jpg>)
+- ⚠️ Take the `cards/` variant only: `cards_cropped/` is a 624×624 square and `cards_small/` is only 268×391 — both come out blurry
+- Drop it into `images/` — **the file name is the card id** (`Blue-Eyes White Dragon.jpg` → card id `Blue-Eyes White Dragon`) —
+  then run `node tools/embed-card.mjs`, or just click the **⟳** next to "Card image" to bake it on the spot. Same two routes as above.
+
+Measured on a real download (Blue-Eyes White Dragon, 813×1185, no preprocessing at all):
+
+| | Result |
+| --- | --- |
+| Card outline (auto) | `26,26 → 788,1159` (aspect 0.6726) |
+| Mask coverage | name 1.77% · art 40.8% · effect box 18.9% · frame 37.1% · art ring 3.2% |
+| Name strokes | Otsu 0.333, auto-detected as "dark text on light plate", class separation 0.574 |
+| Rendering | Super / Ultra / Gold / Ultimate / Ghost / KC / Millennium all render fine — per-pixel difference vs plain N: **10.8 – 28.3** |
+
+Plenty good enough to play with. **The card art is not covered by this project's licence**: the images on YGOPRODeck are
+community-collected official card art, and「遊☆戯☆王」rights belong to KONAMI / SHUEISHA and friends —
+**use them for your own study only, don't sell them and don't pass them off as your own work**.
+Also note that Pendulum / Link / non-effect monsters use different layouts — see "Known trade-offs" below.
+
 ---
 
 ## The 17 crafts
